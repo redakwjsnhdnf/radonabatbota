@@ -1,136 +1,110 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>REDA CRAFT ULTIMATE</title>
+    <title>REDA CRAFT PRO</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #87CEEB; cursor: crosshair; font-family: 'Arial', sans-serif; }
-        #crosshair { position: absolute; top: 50%; left: 50%; width: 20px; height: 20px; border: 2px solid white; transform: translate(-50%, -50%); pointer-events: none; z-index: 10; }
-        #ui { position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; gap: 10px; background: rgba(0,0,0,0.7); padding: 15px; border-radius: 10px; border: 2px solid #fff; }
-        .block-slot { width: 50px; height: 50px; border: 3px solid #555; display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 12px; }
-        .selected { border-color: #00ff00; background: rgba(0,255,0,0.3); }
-        #stats { position: absolute; top: 10px; left: 10px; color: white; background: rgba(0,0,0,0.5); padding: 10px; border-radius: 5px; }
+        body { margin: 0; overflow: hidden; background: #87CEEB; }
+        #crosshair { position: absolute; top: 50%; left: 50%; width: 16px; height: 16px; border: 2px solid white; transform: translate(-50%, -50%); pointer-events: none; }
+        #toolbar { position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; background: rgba(0,0,0,0.5); padding: 5px; }
+        .slot { width: 40px; height: 40px; border: 2px solid #333; background-size: cover; }
+        .selected { border-color: white; }
     </style>
 </head>
 <body>
     <div id="crosshair"></div>
-    <div id="stats">REDA CRAFT v1.0<br>WASD: تحرك | SPACE: قفز<br>LEFT CLICK: حفر | RIGHT CLICK: بناء</div>
-    <div id="ui">
-        <div id="slot0" class="block-slot selected">GRASS</div>
-        <div id="slot1" class="block-slot">DIRT</div>
-        <div id="slot2" class="block-slot">STONE</div>
-        <div id="slot3" class="block-slot">WOOD</div>
+    <div id="toolbar">
+        <div class="slot selected" style="background-image:url('https://minecraft.wiki/images/thumb/Grass_Block_JE4_BE3.png/150px-Grass_Block_JE4_BE3.png')"></div>
+        <div class="slot" style="background-image:url('https://minecraft.wiki/images/thumb/Dirt_JE2_BE2.png/150px-Dirt_JE2_BE2.png')"></div>
+        <div class="slot" style="background-image:url('https://minecraft.wiki/images/thumb/Stone_JE2_BE2.png/150px-Stone_JE2_BE2.png')"></div>
     </div>
 
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script>
-        let scene, camera, renderer, blocks = [];
-        let moveF = false, moveB = false, moveL = false, moveR = false;
-        let velocity = new THREE.Vector3(), canJump = false;
-        let selectedBlock = 0;
-        const colors = [0x228B22, 0x8B4513, 0x808080, 0x5C4033];
+<script type="module">
+import * as THREE from 'https://cdn.skypack.dev/three@0.132.2';
 
-        window.onload = () => {
-            // 1. إعداد المشهد
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x87CEEB);
-            scene.fog = new THREE.Fog(0x87CEEB, 20, 100);
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x87CEEB);
+scene.fog = new THREE.Fog(0x87CEEB, 10, 50);
 
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            document.body.appendChild(renderer.domElement);
+const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+const renderer = new THREE.WebGLRenderer({ antialias: false });
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
 
-            // 2. الإضاءة
-            const light = new THREE.AmbientLight(0xffffff, 0.7);
-            const sun = new THREE.DirectionalLight(0xffffff, 0.6);
-            sun.position.set(10, 20, 10);
-            scene.add(light, sun);
+// تحميل الصور (Textures)
+const loader = new THREE.TextureLoader();
+const loadTex = (url) => {
+    const tex = loader.load(url);
+    tex.magFilter = THREE.NearestFilter; // هاد السطر كيعطي داك الشكل ديال Pixel Art بحال ماين كرافت
+    return tex;
+};
 
-            // 3. توليد العالم (15x15)
-            for(let x = -10; x < 10; x++) {
-                for(let z = -10; z < 10; z++) {
-                    addBlock(x, 0, z, colors[0]);
-                }
-            }
+const textures = {
+    grass: [
+        new THREE.MeshLambertMaterial({map: loadTex('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/minecraft/grass_dirt.jpg')}), // side
+        new THREE.MeshLambertMaterial({map: loadTex('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/minecraft/grass.jpg')}),      // top
+        new THREE.MeshLambertMaterial({map: loadTex('https://raw.githubusercontent.com/mrdoob/three.js/master/examples/textures/minecraft/dirt.jpg')})       // bottom
+    ]
+};
 
-            camera.position.set(0, 2, 5);
+const blocks = [];
+const worldSize = 20;
 
-            // 4. التحكم بالماوس (Pointer Lock)
-            document.addEventListener('click', () => document.body.requestPointerLock());
-            document.addEventListener('mousemove', (e) => {
-                if(document.pointerLockElement === document.body) {
-                    camera.rotation.y -= e.movementX * 0.002;
-                    camera.rotation.x -= e.movementY * 0.002;
-                    camera.rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, camera.rotation.x));
-                }
-            });
+// توليد عالم "تضاريسي" بسيط
+for(let x = -worldSize; x < worldSize; x++) {
+    for(let z = -worldSize; z < worldSize; z++) {
+        const h = Math.floor(Math.sin(x/5) * Math.cos(z/5) * 2) + 2;
+        for(let y = 0; y < h; y++) {
+            const geo = new THREE.BoxGeometry(1, 1, 1);
+            const mesh = new THREE.Mesh(geo, y === h-1 ? textures.grass : textures.grass[2]);
+            mesh.position.set(x, y, z);
+            scene.add(mesh);
+            blocks.push(mesh);
+        }
+    }
+}
 
-            // 5. الحفر والبناء
-            window.addEventListener('mousedown', (e) => {
-                if(document.pointerLockElement !== document.body) return;
-                const ray = new THREE.Raycaster();
-                ray.setFromCamera({x:0, y:0}, camera);
-                const hits = ray.intersectObjects(blocks);
+const light = new THREE.AmbientLight(0xffffff, 0.8);
+scene.add(light);
+const dLight = new THREE.DirectionalLight(0xffffff, 0.4);
+dLight.position.set(10, 20, 10);
+scene.add(dLight);
 
-                if(hits.length > 0) {
-                    const hit = hits[0];
-                    if(e.button === 0) { // حفر
-                        scene.remove(hit.object);
-                        blocks = blocks.filter(b => b !== hit.object);
-                    } else if(e.button === 2) { // بناء
-                        const p = hit.object.position.clone().add(hit.face.normal);
-                        addBlock(p.x, p.y, p.z, colors[selectedBlock]);
-                    }
-                }
-            });
-            window.oncontextmenu = (e) => e.preventDefault();
+camera.position.set(0, 5, 5);
 
-            // 6. التحكم باللوحة
-            window.onkeydown = (e) => {
-                if(e.code==='KeyW') moveF = true; if(e.code==='KeyS') moveB = true;
-                if(e.code==='KeyA') moveL = true; if(e.code==='KeyD') moveR = true;
-                if(e.code==='Space' && canJump) { velocity.y = 0.15; canJump = false; }
-                if(e.key >= 1 && e.key <= 4) {
-                    selectedBlock = parseInt(e.key) - 1;
-                    document.querySelectorAll('.block-slot').forEach((s,i) => s.className = i===selectedBlock ? 'block-slot selected' : 'block-slot');
-                }
-            };
-            window.onkeyup = (e) => {
-                if(e.code==='KeyW') moveF = false; if(e.code==='KeyS') moveB = false;
-                if(e.code==='KeyA') moveL = false; if(e.code==='KeyD') moveR = false;
-            };
+// نظام التحكم الاحترافي
+let moveF = false, moveB = false, moveL = false, moveR = false;
+document.addEventListener('keydown', (e) => {
+    if(e.code === 'KeyW') moveF = true;
+    if(e.code === 'KeyS') moveB = true;
+    if(e.code === 'KeyA') moveL = true;
+    if(e.code === 'KeyD') moveR = true;
+});
+document.addEventListener('keyup', (e) => {
+    if(e.code === 'KeyW') moveF = false;
+    if(e.code === 'KeyS') moveB = false;
+    if(e.code === 'KeyA') moveL = false;
+    if(e.code === 'KeyD') moveR = false;
+});
 
-            function addBlock(x, y, z, color) {
-                const cube = new THREE.Mesh(
-                    new THREE.BoxGeometry(1, 1, 1),
-                    new THREE.MeshPhongMaterial({color: color, flatShading: true})
-                );
-                cube.position.set(x, y, z);
-                scene.add(cube);
-                blocks.push(cube);
-            }
+document.addEventListener('click', () => document.body.requestPointerLock());
+document.addEventListener('mousemove', (e) => {
+    if(document.pointerLockElement) {
+        camera.rotation.y -= e.movementX * 0.002;
+        camera.rotation.x -= e.movementY * 0.002;
+        camera.rotation.x = Math.max(-Math.PI/2, Math.min(Math.PI/2, camera.rotation.x));
+    }
+});
 
-            // 7. حلقة التحديث (Game Loop)
-            function update() {
-                requestAnimationFrame(update);
-                
-                // فيزياء بسيطة
-                velocity.y -= 0.008; // جاذبية
-                camera.position.y += velocity.y;
-                if(camera.position.y < 2) { camera.position.y = 2; velocity.y = 0; canJump = true; }
-
-                const speed = 0.12;
-                if(moveF) camera.translateZ(-speed);
-                if(moveB) camera.translateZ(speed);
-                if(moveL) camera.translateX(-speed);
-                if(moveR) camera.translateX(speed);
-
-                renderer.render(scene, camera);
-            }
-            update();
-        };
-    </script>
+function animate() {
+    requestAnimationFrame(animate);
+    const speed = 0.1;
+    if(moveF) camera.translateZ(-speed);
+    if(moveB) camera.translateZ(speed);
+    if(moveL) camera.translateX(-speed);
+    if(moveR) camera.translateX(speed);
+    renderer.render(scene, camera);
+}
+animate();
+</script>
 </body>
 </html>
