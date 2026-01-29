@@ -3,138 +3,166 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>REDA | STAR WARRIOR</title>
+    <title>REDA | WASTELAND EXPLORER</title>
     <style>
-        body { margin: 0; background: #000; overflow: hidden; touch-action: none; font-family: 'Courier New', monospace; }
-        #ui { position: absolute; top: 10px; left: 10px; color: #00f2ff; z-index: 100; pointer-events: none; }
-        #controls-hint { position: absolute; bottom: 10px; width: 100%; text-align: center; color: rgba(0,242,255,0.5); font-size: 12px; }
-        #msg { position: absolute; width: 100%; text-align: center; top: 40%; color: #ff0055; font-size: 40px; display: none; z-index: 101; background: rgba(0,0,0,0.7); padding: 20px 0; }
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; touch-action: none; }
+        #ui { position: absolute; top: 10px; left: 10px; color: #00ff00; text-shadow: 0 0 5px #00ff00; z-index: 100; pointer-events: none; }
+        #controls-hint { position: absolute; bottom: 10px; width: 100%; text-align: center; color: rgba(0,255,0,0.5); font-size: 12px; }
         canvas { display: block; }
     </style>
 </head>
 <body>
     <div id="ui">
-        <h2 style="margin:0">STAR WARRIOR</h2>
-        <p>KILLS: <span id="kills">0</span> | DISTANCE: <span id="dist">0</span></p>
+        <h2>WASTELAND EXPLORER</h2>
+        <p>POS: X:<span id="pos-x">0</span> Y:<span id="pos-y">0</span> Z:<span id="pos-z">0</span></p>
     </div>
-    <div id="msg">MISSION FAILED</div>
-    <div id="controls-hint">PC: Mouse to Move, Click to Shoot | Mobile: Touch & Drag</div>
+    <div id="controls-hint">PC: WASD to Move, Mouse to Look | Mobile: Touchpad to Move/Look (Experimental)</div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
-        let scene, camera, renderer, ship, stars, asteroids = [], bullets = [];
-        let kills = 0, distance = 0, alive = true, speed = 0.6;
-        let targetX = 0, targetY = 0;
+        let scene, camera, renderer;
+        let player, playerSpeed = 0.1;
+        let keys = { w: false, a: false, s: false, d: false };
+        let mouseX = 0, mouseY = 0, targetRotationX = 0, targetRotationY = 0;
+        const worldSize = 100; // حجم العالم
+        const objects = [];
 
         function init() {
             scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x222222); // سماء صحراوية
+            scene.fog = new THREE.Fog(0x222222, 50, 200);
+
             camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 1.8, 0); // ارتفاع الكاميرا (من منظور الشخص الأول)
+            camera.rotation.order = 'YXZ'; // ترتيب دوران الكاميرا مهم لتجنب "Gimbal Lock"
+
             renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             renderer.setPixelRatio(window.devicePixelRatio);
             document.body.appendChild(renderer.domElement);
 
-            // إضاءة سينمائية
-            const light = new THREE.PointLight(0xffffff, 1, 100);
-            light.position.set(5, 5, 5);
-            scene.add(light, new THREE.AmbientLight(0x222244));
+            // الإضاءة (شمس الصحراء)
+            const sunLight = new THREE.DirectionalLight(0xffddaa, 2);
+            sunLight.position.set(50, 100, 50);
+            sunLight.castShadow = true;
+            scene.add(sunLight);
+            scene.add(new THREE.AmbientLight(0x444444));
 
-            // نظام النجوم
-            const starGeo = new THREE.BufferGeometry();
-            const starPos = [];
-            for(let i=0; i<3000; i++) starPos.push(Math.random()*1000-500, Math.random()*1000-500, Math.random()*1000-500);
-            starGeo.setAttribute('position', new THREE.Float32BufferAttribute(starPos, 3));
-            stars = new THREE.Points(starGeo, new THREE.PointsMaterial({color: 0xffffff, size: 0.5}));
-            scene.add(stars);
+            // اللاعب (شخصية مكعبة بسيطة)
+            const playerGeo = new THREE.BoxGeometry(1, 1.8, 1);
+            const playerMat = new THREE.MeshPhongMaterial({ color: 0x00ff00 });
+            player = new THREE.Mesh(playerGeo, playerMat);
+            player.position.y = 0.9; // ليكون منتصباً على الأرض
+            // player.visible = false; // يمكن إخفائه ليكون منظور الشخص الأول
+            scene.add(player);
 
-            // تصميم السفينة (متطورة)
-            ship = new THREE.Group();
-            const body = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.15, 1.2), new THREE.MeshPhongMaterial({color: 0x444444}));
-            const cockpit = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 8), new THREE.MeshPhongMaterial({color: 0x00ffff, transparent: true, opacity: 0.6}));
-            cockpit.position.y = 0.1; cockpit.position.z = 0.2;
-            const wingL = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.05, 0.5), new THREE.MeshPhongMaterial({color: 0x222222}));
-            wingL.position.x = 0.5;
-            ship.add(body, cockpit, wingL);
-            scene.add(ship);
-            camera.position.z = 5;
+            // الأرضية (تضاريس صحراوية)
+            const groundGeo = new THREE.PlaneGeometry(worldSize * 2, worldSize * 2, worldSize, worldSize);
+            const groundMat = new THREE.MeshPhongMaterial({ color: 0x886633, side: THREE.DoubleSide });
+            // تعديل ارتفاعات الأرضية بشكل عشوائي (تضاريس)
+            const position = groundGeo.attributes.position;
+            const vertex = new THREE.Vector3();
+            for (let i = 0; i < position.count; i++) {
+                vertex.fromBufferAttribute(position, i);
+                vertex.z += Math.random() * 5 - 2.5; // إضافة ارتفاع عشوائي
+                position.setZ(i, vertex.z);
+            }
+            groundGeo.computeVertexNormals();
+            const ground = new THREE.Mesh(groundGeo, groundMat);
+            ground.rotation.x = -Math.PI / 2;
+            ground.position.y = -0.01;
+            scene.add(ground);
 
-            // العوائق
-            for(let i=0; i<30; i++) spawnAsteroid();
+            // إضافة أشجار / صخور عشوائية
+            const treeGeo = new THREE.CylinderGeometry(0.5, 1, 5, 8);
+            const treeMat = new THREE.MeshPhongMaterial({ color: 0x663300 });
+            for (let i = 0; i < 50; i++) {
+                const tree = new THREE.Mesh(treeGeo, treeMat);
+                tree.position.set(
+                    Math.random() * worldSize - worldSize / 2,
+                    2.5, // ارتفاع الشجرة
+                    Math.random() * worldSize - worldSize / 2
+                );
+                scene.add(tree);
+                objects.push(tree);
+            }
 
-            // أحداث التحكم (PC + Mobile)
-            window.addEventListener('mousemove', e => updateTarget(e.clientX, e.clientY));
-            window.addEventListener('touchmove', e => { e.preventDefault(); updateTarget(e.touches[0].clientX, e.touches[0].clientY); }, {passive: false});
-            window.addEventListener('mousedown', shoot);
-            window.addEventListener('touchstart', shoot);
+
+            // أحداث التحكم (PC)
+            window.addEventListener('keydown', onKeyDown);
+            window.addEventListener('keyup', onKeyUp);
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('click', () => renderer.domElement.requestPointerLock()); // قفل المؤشر
+
+            // أحداث التحكم (Mobile - تجريبي)
+            renderer.domElement.addEventListener('touchstart', onTouchStart);
+            renderer.domElement.addEventListener('touchmove', onTouchMove);
+
             window.addEventListener('resize', onWindowResize);
-
             animate();
         }
 
-        function updateTarget(x, y) {
-            targetX = (x / window.innerWidth) * 2 - 1;
-            targetY = -(y / window.innerHeight) * 2 + 1;
+        function onKeyDown(event) { if (event.key === 'w') keys.w = true; if (event.key === 's') keys.s = true; if (event.key === 'a') keys.a = true; if (event.key === 'd') keys.d = true; }
+        function onKeyUp(event) { if (event.key === 'w') keys.w = false; if (event.key === 's') keys.s = false; if (event.key === 'a') keys.a = false; if (event.key === 'd') keys.d = false; }
+
+        function onMouseMove(event) {
+            if (document.pointerLockElement === renderer.domElement) {
+                targetRotationX -= event.movementY * 0.002;
+                targetRotationY -= event.movementX * 0.002;
+                targetRotationX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, targetRotationX)); // حد دوران الكاميرا
+            }
         }
 
-        function shoot() {
-            if(!alive) return;
-            const b = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.5), new THREE.MeshBasicMaterial({color: 0xff0000}));
-            b.rotation.x = Math.PI/2;
-            b.position.set(ship.position.x, ship.position.y, ship.position.z - 1);
-            scene.add(b);
-            bullets.push(b);
+        // تحكم اللمس (تجريبي - يحتاج تحسين)
+        let lastTouchX = 0, lastTouchY = 0;
+        function onTouchStart(event) {
+            lastTouchX = event.touches[0].clientX;
+            lastTouchY = event.touches[0].clientY;
         }
+        function onTouchMove(event) {
+            const deltaX = event.touches[0].clientX - lastTouchX;
+            const deltaY = event.touches[0].clientY - lastTouchY;
+            
+            targetRotationY -= deltaX * 0.005; // دوران أفقي
+            targetRotationX -= deltaY * 0.005; // دوران عمودي
+            targetRotationX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, targetRotationX));
+            
+            lastTouchX = event.touches[0].clientX;
+            lastTouchY = event.touches[0].clientY;
 
-        function spawnAsteroid() {
-            const a = new THREE.Mesh(new THREE.IcosahedronGeometry(Math.random()*0.5+0.3, 0), new THREE.MeshPhongMaterial({color: 0x666666, flatShading: true}));
-            a.position.set(Math.random()*20-10, Math.random()*12-6, -Math.random()*80 - 40);
-            scene.add(a);
-            asteroids.push(a);
+            // حركة اللاعب باللمس (تجريبي)
+            if (Math.abs(deltaY) > Math.abs(deltaX) && Math.abs(deltaY) > 5) { // حركة للأمام/الخلف
+                if (deltaY < 0) keys.w = true; else keys.s = true;
+                setTimeout(() => { keys.w = false; keys.s = false; }, 100); // للحظة فقط
+            }
         }
 
         function animate() {
-            if(!alive) return;
             requestAnimationFrame(animate);
 
-            // حركة السفينة الانسيابية
-            ship.position.x += (targetX * 7 - ship.position.x) * 0.1;
-            ship.position.y += (targetY * 4 - ship.position.y) * 0.1;
-            ship.rotation.z = -(ship.position.x - targetX*7) * 0.2; // ميلان عند الانعطاف
-            camera.position.x = ship.position.x * 0.3;
-            camera.position.y = ship.position.y * 0.3;
+            // تحديث دوران الكاميرا
+            camera.rotation.y = targetRotationY;
+            camera.rotation.x = targetRotationX;
 
-            // الرصاص
-            bullets.forEach((b, i) => {
-                b.position.z -= 1.5;
-                if(b.position.z < -100) { scene.remove(b); bullets.splice(i, 1); }
-                // تصادم الرصاص مع النيازك
-                asteroids.forEach(a => {
-                    if(b.position.distanceTo(a.position) < 1) {
-                        a.position.z = -100; a.position.x = Math.random()*20-10;
-                        kills++; document.getElementById('kills').innerText = kills;
-                    }
-                });
-            });
+            // حركة اللاعب (PC)
+            const forward = new THREE.Vector3();
+            camera.getWorldDirection(forward);
+            forward.y = 0; forward.normalize(); // لعدم الطيران
+            const right = new THREE.Vector3().crossVectors(camera.up, forward).normalize();
 
-            // النيازك
-            asteroids.forEach(a => {
-                a.position.z += speed;
-                a.rotation.y += 0.02;
-                if(a.position.z > 10) a.position.z = -100;
-                if(ship.position.distanceTo(a.position) < 0.8) die();
-            });
+            if (keys.w) { camera.position.addScaledVector(forward, playerSpeed); }
+            if (keys.s) { camera.position.addScaledVector(forward, -playerSpeed); }
+            if (keys.a) { camera.position.addScaledVector(right, -playerSpeed); }
+            if (keys.d) { camera.position.addScaledVector(right, playerSpeed); }
 
-            stars.position.z += speed;
-            if(stars.position.z > 200) stars.position.z = 0;
+            // تحديث موقع اللاعب (لأغراض الـ UI)
+            player.position.copy(camera.position);
 
-            distance += 0.1; speed += 0.00005;
-            document.getElementById('dist').innerText = Math.floor(distance);
+            document.getElementById('pos-x').innerText = camera.position.x.toFixed(2);
+            document.getElementById('pos-y').innerText = camera.position.y.toFixed(2);
+            document.getElementById('pos-z').innerText = camera.position.z.toFixed(2);
+
             renderer.render(scene, camera);
-        }
-
-        function die() {
-            alive = false; document.getElementById('msg').style.display = 'block';
-            setTimeout(() => location.reload(), 3000);
         }
 
         function onWindowResize() {
