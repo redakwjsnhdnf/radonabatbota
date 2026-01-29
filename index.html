@@ -1,93 +1,74 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>REDA 3D DISCO RUN</title>
+    <title>REDA | NEON VORTEX</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', monospace; }
-        #info { position: absolute; top: 10px; width: 100%; text-align: center; color: #0f0; font-size: 24px; pointer-events: none; }
+        body { margin: 0; background: #000; overflow: hidden; font-family: 'Courier New', monospace; }
+        #ui { position: absolute; top: 20px; left: 20px; color: #0ff; text-shadow: 0 0 10px #0ff; pointer-events: none; }
     </style>
 </head>
 <body>
-    <div id="info">SCORE: 0 <br> [Arrows to Move]</div>
+    <div id="ui"><h1>NEON VORTEX</h1><p id="score">DISTANCE: 0m</p></div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
-        let scene, camera, renderer, player, obstacles = [], score = 0;
-        let speed = 0.2;
+        let scene, camera, renderer, tube, binormal = new THREE.Vector3(), normal = new THREE.Vector3();
+        let score = 0;
 
         function init() {
             scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x050505);
-            scene.fog = new THREE.Fog(0x050505, 1, 50);
-
-            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 2, 5);
-
-            renderer = new THREE.WebGLRenderer({ antialias: true });
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+            
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
             document.body.appendChild(renderer.domElement);
 
-            // الإضاءة
-            const light = new THREE.DirectionalLight(0xffffff, 1);
-            light.position.set(0, 10, 10);
-            scene.add(light);
-            scene.add(new THREE.AmbientLight(0x404040));
+            // إنشاء مسار الأنفاق بشكل منحني (Spline)
+            const points = [];
+            for (let i = 0; i < 100; i++) {
+                points.push(new THREE.Vector3(Math.sin(i * 0.2) * 5, Math.cos(i * 0.2) * 5, i * 10));
+            }
+            const path = new THREE.CatmullRomCurve3(points);
 
-            // اللاعب (كرة مضيئة)
-            const geometry = new THREE.SphereGeometry(0.5, 32, 32);
-            const material = new THREE.MeshPhongMaterial({ color: 0x00ff41, emissive: 0x00ff41, emissiveIntensity: 0.5 });
-            player = new THREE.Mesh(geometry, material);
-            player.position.y = 0.5;
-            scene.add(player);
+            // هندسة الأنبوب مع مادة مضيئة
+            const tubeGeo = new THREE.TubeGeometry(path, 200, 2, 20, false);
+            const tubeMat = new THREE.MeshBasicMaterial({ 
+                color: 0x00ffff, wireframe: true, side: THREE.DoubleSide 
+            });
+            tube = new THREE.Mesh(tubeGeo, tubeMat);
+            scene.add(tube);
 
-            // الأرضية (الطريق)
-            const floorGeo = new THREE.PlaneGeometry(10, 200);
-            const floorMat = new THREE.MeshPhongMaterial({ color: 0x111111 });
-            const floor = new THREE.Mesh(floorGeo, floorMat);
-            floor.rotation.x = -Math.PI / 2;
-            scene.add(floor);
+            // إضافة إضاءة محيطة
+            const pLight = new THREE.PointLight(0xff00ff, 1, 100);
+            scene.add(pLight);
 
-            createObstacle();
             animate();
         }
 
-        function createObstacle() {
-            const obsGeo = new THREE.BoxGeometry(1, 1, 1);
-            const obsMat = new THREE.MeshPhongMaterial({ color: 0xff0000 });
-            const obs = new THREE.Mesh(obsGeo, obsMat);
-            obs.position.set(Math.floor(Math.random() * 3) - 1, 0.5, -50);
-            scene.add(obs);
-            obstacles.push(obs);
-            setTimeout(createObstacle, 1000 / (1 + score/100));
-        }
-
-        window.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowLeft' && player.position.x > -1) player.position.x -= 1;
-            if (e.key === 'ArrowRight' && player.position.x < 1) player.position.x += 1;
-        });
-
+        let percentage = 0;
         function animate() {
             requestAnimationFrame(animate);
-            
-            // تحريك العوائق
-            obstacles.forEach((obs, index) => {
-                obs.position.z += speed;
-                // تصادم
-                if (obs.position.z > 4.5 && obs.position.z < 5.5 && Math.round(obs.position.x) === Math.round(player.position.x)) {
-                    alert("GAME OVER! SCORE: " + Math.floor(score));
-                    location.reload();
-                }
-                if (obs.position.z > 10) {
-                    scene.remove(obs);
-                    obstacles.splice(index, 1);
-                }
-            });
+            percentage += 0.0005; // السرعة
+            score += 1;
 
-            score += 0.1;
-            document.getElementById('info').innerHTML = "SCORE: " + Math.floor(score);
-            speed += 0.0001; // زيادة الصعوبة
+            const p1 = tube.geometry.parameters.path.getPointAt(percentage % 1);
+            const p2 = tube.geometry.parameters.path.getPointAt((percentage + 0.01) % 1);
+            
+            camera.position.set(p1.x, p1.y, p1.z);
+            camera.lookAt(p2);
+
+            // تغيير الألوان بشكل مبهر مع الحركة
+            tube.material.color.setHSL((percentage * 5) % 1, 1, 0.5);
+            document.getElementById('score').innerText = "DISTANCE: " + score + "m";
 
             renderer.render(scene, camera);
         }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
 
         init();
     </script>
