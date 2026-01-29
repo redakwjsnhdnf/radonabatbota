@@ -2,101 +2,91 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>REDA WORLD - Phase 6 (BOSS FIGHT)</title>
+    <title>REDA WORLD - Phase 7 (ULTRA VFX)</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #1a1a1a; font-family: sans-serif; }
-        #ui { position: absolute; top: 10px; left: 10px; color: white; background: rgba(0,0,0,0.6); padding: 15px; border-radius: 8px; z-index: 10; border-left: 5px solid #ff0055; }
-        #boss-health { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); width: 300px; height: 20px; background: #333; border: 2px solid #fff; display: none; }
-        #boss-fill { width: 100%; height: 100%; background: #ff0055; transition: 0.3s; }
-        #msg { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); color: #ff0055; font-size: 40px; font-weight: bold; display: none; text-shadow: 2px 2px #000; }
+        body { margin: 0; overflow: hidden; background: #000; font-family: 'Courier New', monospace; }
+        #ui { position: absolute; top: 10px; left: 10px; color: #0f0; background: rgba(0,0,0,0.8); padding: 15px; border: 1px solid #0f0; z-index: 10; }
+        #boss-health { position: absolute; top: 20px; left: 50%; transform: translateX(-50%); width: 400px; height: 15px; background: #222; border: 2px solid #f00; display: none; }
+        #boss-fill { width: 100%; height: 100%; background: linear-gradient(90deg, #ff0000, #ff5555); }
     </style>
 </head>
 <body>
     <div id="ui">
-        <b>REDA WORLD - Phase 6</b><br>
-        الضحايا: <span id="kills">0</span> / 5 للوصول للوحش<br>
-        المستوى: <span id="lvl">1</span>
+        <b>SYSTEM: REDA_OS v1.0</b><br>
+        KILLS: <span id="kills">0</span><br>
+        STATUS: <span id="status">EXPLORING</span>
     </div>
     <div id="boss-health"><div id="boss-fill"></div></div>
-    <div id="msg">ظهور الوحش العملاق! 👹</div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
         window.onload = () => {
             const scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x87CEEB);
+            scene.background = new THREE.Color(0x050505);
             const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
             const renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.body.appendChild(renderer.domElement);
 
-            scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1));
+            // إضاءة النيون (Cyberpunk Style)
+            const light = new THREE.PointLight(0x00ffcc, 1, 100);
+            light.position.set(0, 10, 0);
+            scene.add(light, new THREE.AmbientLight(0x404040));
 
-            const ground = new THREE.Mesh(new THREE.PlaneGeometry(200, 200), new THREE.MeshPhongMaterial({color: 0x348C31}));
-            ground.rotation.x = -Math.PI / 2;
-            scene.add(ground);
+            // الأرضية (Grid Neon)
+            const grid = new THREE.GridHelper(200, 40, 0x00ffcc, 0x003333);
+            scene.add(grid);
 
+            // اللاعب
             const player = new THREE.Group();
-            const pBody = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.5, 0.4), new THREE.MeshPhongMaterial({color: 0x0066ff}));
+            const pBody = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.5, 0.4), new THREE.MeshPhongMaterial({color: 0x00ffcc}));
             pBody.position.y = 0.75;
             player.add(pBody);
-            const sword = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 1.2), new THREE.MeshPhongMaterial({color: 0xffcc00}));
-            sword.position.set(0.4, 0.8, -0.6);
-            player.add(sword);
             scene.add(player);
 
             let enemies = [];
             let killCount = 0;
-            let boss = null;
-            let bossHP = 100;
-            let isBossActive = false;
+            let shakeTime = 0;
 
             function spawnEnemy() {
-                const enemy = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshPhongMaterial({color: 0xff0000}));
-                enemy.position.set(Math.random()*40-20, 0.5, Math.random()*40-20);
+                const enemy = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshPhongMaterial({color: 0xff0055, emissive: 0xff0055}));
+                enemy.position.set(Math.random()*60-30, 0.5, Math.random()*60-30);
                 scene.add(enemy);
                 enemies.push(enemy);
             }
-            for(let i=0; i<8; i++) spawnEnemy();
+            for(let i=0; i<10; i++) spawnEnemy();
+
+            // دالة اهتزاز الكاميرا
+            function triggerShake() { shakeTime = 0.3; }
 
             window.onclick = () => {
-                sword.rotation.x = -Math.PI / 3;
-                setTimeout(() => sword.rotation.x = 0, 100);
-
-                if(isBossActive && player.position.distanceTo(boss.position) < 5) {
-                    bossHP -= 10;
-                    document.getElementById('boss-fill').style.width = bossHP + "%";
-                    if(bossHP <= 0) {
-                        scene.remove(boss);
-                        alert("مبروك! قتلت الوحش العملاق يا بطل!");
-                        location.reload();
-                    }
-                }
-
+                triggerShake(); // اهتزاز عند كل ضربة
                 enemies.forEach((enemy, index) => {
-                    if(player.position.distanceTo(enemy.position) < 3) {
+                    if(player.position.distanceTo(enemy.position) < 4) {
+                        createExplosion(enemy.position);
                         scene.remove(enemy);
                         enemies.splice(index, 1);
                         killCount++;
                         document.getElementById('kills').innerText = killCount;
-                        if(killCount === 5) startBossBattle();
-                        else spawnEnemy();
+                        spawnEnemy();
                     }
                 });
             };
 
-            function startBossBattle() {
-                isBossActive = true;
-                document.getElementById('msg').style.display = 'block';
-                document.getElementById('boss-health').style.display = 'block';
-                document.getElementById('lvl').innerText = "2 (BOSS)";
-                scene.background = new THREE.Color(0x330000); // تغيير الجو للاحمر
-                
-                // صنع الوحش
-                boss = new THREE.Mesh(new THREE.BoxGeometry(4, 6, 4), new THREE.MeshPhongMaterial({color: 0x000000, emissive: 0xff0000}));
-                boss.position.set(0, 3, -20);
-                scene.add(boss);
-                setTimeout(() => document.getElementById('msg').style.display = 'none', 3000);
+            // نظام الانفجار (Particles)
+            function createExplosion(pos) {
+                for(let i=0; i<10; i++) {
+                    const p = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.2, 0.2), new THREE.MeshBasicMaterial({color: 0xff0055}));
+                    p.position.copy(pos);
+                    scene.add(p);
+                    const dir = new THREE.Vector3(Math.random()-0.5, Math.random(), Math.random()-0.5).normalize();
+                    const speed = 0.2;
+                    const interval = setInterval(() => {
+                        p.position.addScaledVector(dir, speed);
+                        p.scale.multiplyScalar(0.9);
+                        if(p.scale.x < 0.01) { scene.remove(p); clearInterval(interval); }
+                    }, 16);
+                }
             }
 
             const keys = {};
@@ -105,16 +95,20 @@
 
             function animate() {
                 requestAnimationFrame(animate);
-                if (keys['KeyW']) player.translateZ(-0.2);
-                if (keys['KeyS']) player.translateZ(0.2);
+                if (keys['KeyW']) player.translateZ(-0.25);
+                if (keys['KeyS']) player.translateZ(0.25);
                 if (keys['KeyA']) player.rotation.y += 0.05;
                 if (keys['KeyD']) player.rotation.y -= 0.05;
 
-                if(isBossActive && boss) {
-                    boss.position.x += Math.sin(Date.now() * 0.002) * 0.1; // الوحش كيتحرك
+                // تطبيق اهتزاز الكاميرا
+                let sx = 0, sy = 0;
+                if(shakeTime > 0) {
+                    sx = (Math.random() - 0.5) * 0.5;
+                    sy = (Math.random() - 0.5) * 0.5;
+                    shakeTime -= 0.02;
                 }
 
-                const offset = new THREE.Vector3(0, 6, 12).applyMatrix4(player.matrixWorld);
+                const offset = new THREE.Vector3(sx, 5 + sy, 10).applyMatrix4(player.matrixWorld);
                 camera.position.lerp(offset, 0.1);
                 camera.lookAt(player.position.x, player.position.y + 1, player.position.z);
                 renderer.render(scene, camera);
