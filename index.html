@@ -1,24 +1,43 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>REDA MEGA PROJECT | v1.0</title>
-    <link rel="stylesheet" href="style.css">
+    <title>REDA PROJECT - STEP 1</title>
+    <style>
+        body { margin: 0; overflow: hidden; background: #000; }
+        #status { position: absolute; top: 10px; left: 10px; color: white; background: rgba(0,0,0,0.5); padding: 10px; font-family: sans-serif; }
+    </style>
 </head>
 <body>
-    <div id="game-container">
-        <div id="ui-overlay">
-            <div id="stats">XP: <span id="xp">0</span> | Level: <span id="lvl">1</span></div>
-            <div id="inventory">🎒 حقيبة الأدوات</div>
-        </div>
-        <div id="loading-screen">
-            <h1>جاري تحميل العالم الضخم...</h1>
-            <div class="progress-bar"><div id="progress"></div></div>
-        </div>
-    </div>
-
+    <div id="status">المرحلة 1: المحرك شغال ✅</div>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="game.js"></script>
+    <script>
+        // إعداد المشهد
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87CEEB);
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer();
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+
+        // إضافة أرضية
+        const ground = new THREE.Mesh(new THREE.PlaneGeometry(100, 100), new THREE.MeshBasicMaterial({color: 0x228B22}));
+        ground.rotation.x = -Math.PI / 2;
+        scene.add(ground);
+
+        // إضافة مكعب يمثل اللاعب
+        const player = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial({color: 0xff0000}));
+        player.position.y = 0.5;
+        scene.add(player);
+
+        camera.position.set(0, 5, 10);
+        camera.lookAt(0, 0, 0);
+
+        function animate() {
+            requestAnimationFrame(animate);
+            player.rotation.y += 0.01; // المكعب غايدور باش نعرفو اللعبة خدامة
+            renderer.render(scene, camera);
+        }
+        animate();
+    </script>
 </body>
 </html>
