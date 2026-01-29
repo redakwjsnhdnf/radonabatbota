@@ -2,90 +2,77 @@
 <html lang="ar">
 <head>
     <meta charset="UTF-8">
-    <title>THE ORIGIN | المبدأ</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.4.0/p5.js"></script>
+    <title>THE SILENCE</title>
     <style>
-        body { margin: 0; background: #000; overflow: hidden; font-family: 'serif'; cursor: crosshair; }
-        #overlay {
-            position: fixed; top: 40px; left: 40px; color: #ffb7c5;
-            z-index: 10; pointer-events: none; opacity: 0.6;
+        body { margin: 0; background: #000; overflow: hidden; display: flex; align-items: center; justify-content: center; height: 100vh; cursor: none; }
+        #core {
+            width: 10px; height: 10px; background: #ffb7c5; border-radius: 50%;
+            box-shadow: 0 0 50px #ffb7c5; transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
-        .concept-title { letter-spacing: 15px; font-size: 14px; border-bottom: 1px solid #ffb7c5; padding-bottom: 5px; }
+        #message {
+            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: #ffb7c5; font-family: 'serif'; letter-spacing: 20px;
+            opacity: 0; transition: 2s; pointer-events: none; text-align: center;
+        }
+        #cursor {
+            position: fixed; width: 2px; height: 20px; background: #ffb7c5; pointer-events: none;
+        }
     </style>
 </head>
 <body>
-    <div id="overlay">
-        <div class="concept-title">THE ORIGIN</div>
-        <p style="font-size: 9px; margin-top: 10px; letter-spacing: 2px;">كل أثر هو بداية لقصة أخرى</p>
-    </div>
+    <div id="cursor"></div>
+    <div id="core"></div>
+    <div id="message">الصمت هو لغة الخلود</div>
 
     <script>
-        let nodes = [];
-        let connections = [];
+        const core = document.getElementById('core');
+        const msg = document.getElementById('message');
+        const cursor = document.getElementById('cursor');
 
-        function setup() {
-            createCanvas(windowWidth, windowHeight);
-            // خلق "نواة" مركزية
-            for (let i = 0; i < 40; i++) {
-                nodes.push(new Node(random(width), random(height)));
-            }
-        }
+        document.addEventListener('mousemove', (e) => {
+            cursor.style.left = e.clientX + 'px';
+            cursor.style.top = e.clientY - 10 + 'px';
+        });
 
-        function draw() {
-            background(0, 30);
-            
-            // رسم الروابط بين النقط (الشبكة العصبية للتاريخ)
-            for (let i = 0; i < nodes.length; i++) {
-                for (let j = i + 1; j < nodes.length; j++) {
-                    let d = dist(nodes[i].x, nodes[i].y, nodes[j].x, nodes[j].y);
-                    if (d < 200) {
-                        stroke(255, 183, 197, map(d, 0, 200, 50, 0));
-                        line(nodes[i].x, nodes[i].y, nodes[j].x, nodes[j].y);
-                    }
+        // طلب الوصول للميكروفون لتحليل مستوى الصوت
+        navigator.mediaDevices.getUserMedia({ audio: true })
+        .then(stream => {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const analyser = audioContext.createAnalyser();
+            const microphone = audioContext.createMediaStreamSource(stream);
+            const javascriptNode = audioContext.createScriptProcessor(2048, 1, 1);
+
+            analyser.smoothingTimeConstant = 0.8;
+            analyser.fftSize = 1024;
+            microphone.connect(analyser);
+            analyser.connect(javascriptNode);
+            javascriptNode.connect(audioContext.destination);
+
+            javascriptNode.onaudioprocess = () => {
+                const array = new Uint8Array(analyser.frequencyBinCount);
+                analyser.getByteFrequencyData(array);
+                let values = 0;
+                for (let i = 0; i < array.length; i++) values += array[i];
+                const average = values / array.length;
+
+                // إذا كان الجو هادئاً، يكبر القلب وتظهر الرسالة
+                if (average < 10) { 
+                    core.style.transform = 'scale(20)';
+                    msg.style.opacity = '0.5';
+                    core.style.boxShadow = '0 0 100px #ffb7c5';
+                } else {
+                    // إذا كان هناك ضجيج، ينكمش الموقع ويختفي
+                    core.style.transform = `scale(${Math.max(1, 10 - average/5)})`;
+                    msg.style.opacity = '0';
+                    core.style.boxShadow = 'none';
                 }
-            }
-
-            for (let node of nodes) {
-                node.update();
-                node.show();
-                node.interact(mouseX, mouseY);
-            }
-        }
-
-        class Node {
-            constructor(x, y) {
-                this.x = x;
-                this.y = y;
-                this.originX = x;
-                this.originY = y;
-                this.size = random(2, 5);
-                this.angle = random(TWO_PI);
-            }
-
-            update() {
-                // حركة هادئة كأنها تتنفس
-                this.x = this.originX + cos(this.angle) * 10;
-                this.y = this.originY + sin(this.angle) * 10;
-                this.angle += 0.02;
-            }
-
-            interact(mx, my) {
-                let d = dist(mx, my, this.x, this.y);
-                if (d < 100) {
-                    let force = map(d, 0, 100, 2, 0);
-                    this.originX += (this.x - mx) * 0.02;
-                    this.originY += (this.y - my) * 0.02;
-                }
-            }
-
-            show() {
-                noStroke();
-                fill(255, 183, 197, 200);
-                ellipse(this.x, this.y, this.size);
-            }
-        }
-
-        function windowResized() { resizeCanvas(windowWidth, windowHeight); }
+            };
+        })
+        .catch(err => {
+            console.log("الموقع يحتاج للصمت ليظهر.");
+            msg.innerHTML = "أعط الصلاحية للميكروفون لتجربة الصمت";
+            msg.style.opacity = "1";
+        });
     </script>
 </body>
 </html>
