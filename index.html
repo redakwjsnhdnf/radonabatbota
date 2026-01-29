@@ -1,14 +1,49 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>موقعي على جيت هاب</title>
+    <title>Reda Arcade | الاحترافية</title>
+    <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
     <style>
-        body { background-color: #1a1a1a; color: #00ff00; text-align: center; font-family: monospace; padding-top: 50px; }
-        h1 { border: 2px solid #00ff00; display: inline-block; padding: 10px; }
+        body { margin: 0; background: #000; display: flex; justify-content: center; align-items: center; height: 100vh; overflow: hidden; }
+        canvas { border: 4px solid #00ff41; box-shadow: 0 0 20px #00ff41; }
     </style>
 </head>
 <body>
-    <h1>Hello Kali Linux User!</h1>
-    <p>هذا الموقع يعمل الآن على GitHub Pages</p>
+    <script>
+        // إعدادات اللعبة الاحترافية
+        const config = {
+            type: Phaser.AUTO,
+            width: 800,
+            height: 600,
+            physics: { default: 'arcade', arcade: { gravity: { y: 300 }, debug: false } },
+            scene: { preload: preload, create: create, update: update }
+        };
+
+        const game = new Phaser.Game(config);
+
+        function preload() {
+            // هنا تحمل الصور والأصوات (Assets)
+            this.load.image('sky', 'https://labs.phaser.io/assets/skies/space3.png');
+            this.load.image('logo', 'https://labs.phaser.io/assets/sprites/phaser3-logo.png');
+            this.load.image('red', 'https://labs.phaser.io/assets/particles/red.png');
+        }
+
+        function create() {
+            this.add.image(400, 300, 'sky');
+            const particles = this.add.particles('red');
+            const emitter = particles.createEmitter({
+                speed: 100, scale: { start: 1, end: 0 }, blendMode: 'ADD'
+            });
+            const logo = this.physics.add.image(400, 100, 'logo');
+            logo.setVelocity(100, 200);
+            logo.setBounce(1, 1);
+            logo.setCollideWorldBounds(true);
+            emitter.startFollow(logo);
+        }
+
+        function update() {
+            // هنا تضع منطق اللعبة (حركة اللاعب، التصادم، إلخ)
+        }
+    </script>
 </body>
 </html>
