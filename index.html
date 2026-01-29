@@ -2,121 +2,104 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <title>REDA MEGA PROJECT - Phase 8</title>
+    <title>REDA MEGA PROJECT - 3D MODELS</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; font-family: 'Segoe UI', sans-serif; }
-        #ui { position: absolute; top: 10px; left: 10px; color: #0f0; background: rgba(0,0,0,0.8); padding: 15px; border-radius: 10px; border: 1px solid #0f0; z-index: 10; }
-        #shop-ui { position: absolute; top: 50%; right: 20px; transform: translateY(-50%); background: rgba(0,0,0,0.9); padding: 20px; border: 2px solid #ffcc00; color: #fff; border-radius: 10px; display: none; z-index: 100; }
-        button { background: #ffcc00; border: none; padding: 10px; cursor: pointer; font-weight: bold; margin-top: 10px; width: 100%; }
-        #shop-btn { position: absolute; bottom: 20px; right: 20px; padding: 15px; background: #ffcc00; border-radius: 50%; cursor: pointer; font-weight: bold; z-index: 10; border: none; }
+        body { margin: 0; overflow: hidden; background: #111; font-family: sans-serif; }
+        #gui { position: absolute; top: 10px; left: 10px; color: white; background: rgba(0,0,0,0.7); padding: 15px; border-radius: 10px; border: 2px solid #00f2ff; }
+        .skin-btn { background: #00f2ff; border: none; padding: 5px 10px; cursor: pointer; margin-top: 5px; font-weight: bold; }
     </style>
 </head>
 <body>
-    <div id="ui">
-        <b>REDA WORLD: MEGA PROJECT</b><br>
-        النقاط الكلية: <span id="total-kills">0</span><br>
-        السلاح الحالي: <span id="weapon-name">خنجر بسيط</span>
-    </div>
-
-    <button id="shop-btn" onclick="toggleShop()">🛒 المتجر</button>
-
-    <div id="shop-ui">
-        <h3>متجر الأسلحة</h3>
-        <p>النقاط المطلوبة: 10</p>
-        <button onclick="buyWeapon('سيف النيون', 0x00ffff, 10)">شراء سيف النيون</button>
-        <button onclick="toggleShop()" style="background:#555">إغلاق</button>
+    <div id="gui">
+        <b>REDA AVATAR SYSTEM</b><br>
+        التحكم: WASD + Space<br>
+        تغيير السكين:<br>
+        <button class="skin-btn" onclick="changeSkin(0xff0000)">الأحمر القتالي</button><br>
+        <button class="skin-btn" onclick="changeSkin(0x00ff00)">الأخضر السام</button>
     </div>
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script>
-        // --- نظام الحفظ ---
-        let totalKills = localStorage.getItem('reda_kills') ? parseInt(localStorage.getItem('reda_kills')) : 0;
-        let currentWeaponColor = 0xcccccc;
+        let scene, camera, renderer, player, bodyParts = [];
 
         window.onload = () => {
-            document.getElementById('total-kills').innerText = totalKills;
-
-            const scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x020205);
-            const camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
-            const renderer = new THREE.WebGLRenderer({ antialias: true });
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x131313);
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
             renderer.setSize(window.innerWidth, window.innerHeight);
             document.body.appendChild(renderer.domElement);
 
-            scene.add(new THREE.GridHelper(200, 50, 0x444444, 0x222222));
-            scene.add(new THREE.AmbientLight(0x404040));
+            scene.add(new THREE.HemisphereLight(0xffffff, 0x444444, 1));
+            scene.add(new THREE.GridHelper(100, 20, 0x00f2ff, 0x222222));
 
-            // اللاعب
-            const player = new THREE.Group();
-            const pBody = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.5, 0.4), new THREE.MeshPhongMaterial({color: 0x0066ff}));
-            pBody.position.y = 0.75;
-            player.add(pBody);
+            // --- بناء الشخصية (Roblox Style Humanoid) ---
+            player = new THREE.Group();
+            
+            const mat = new THREE.MeshPhongMaterial({color: 0x00f2ff});
+            
+            // الرأس
+            const head = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.4, 0.4), mat);
+            head.position.y = 1.7;
+            player.add(head);
 
-            // السيف
-            let sword = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.1, 1.2), new THREE.MeshPhongMaterial({color: currentWeaponColor}));
-            sword.position.set(0.4, 0.8, -0.6);
-            player.add(sword);
+            // الجذع (Torso)
+            const torso = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.8, 0.3), mat);
+            torso.position.y = 1.1;
+            player.add(torso);
+
+            // اليدين
+            const armL = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.7, 0.2), mat);
+            armL.position.set(0.45, 1.1, 0);
+            player.add(armL);
+
+            const armR = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.7, 0.2), mat);
+            armR.position.set(-0.45, 1.1, 0);
+            player.add(armR);
+
+            // الرجلين
+            const legL = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.7, 0.25), mat);
+            legL.position.set(0.15, 0.35, 0);
+            player.add(legL);
+
+            const legR = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.7, 0.25), mat);
+            legR.position.set(-0.15, 0.35, 0);
+            player.add(legR);
+
+            bodyParts = [head, torso, armL, armR, legL, legR];
             scene.add(player);
 
-            // وظائف المتجر
-            window.toggleShop = () => {
-                const shop = document.getElementById('shop-ui');
-                shop.style.display = shop.style.display === 'none' ? 'block' : 'none';
-            };
-
-            window.buyWeapon = (name, color, price) => {
-                if(totalKills >= price) {
-                    totalKills -= price;
-                    localStorage.setItem('reda_kills', totalKills);
-                    document.getElementById('total-kills').innerText = totalKills;
-                    sword.material.color.setHex(color);
-                    document.getElementById('weapon-name').innerText = name;
-                    alert("تم الشراء بنجاح!");
-                } else {
-                    alert("نقاطك لا تكفي!");
-                }
-            };
-
-            let enemies = [];
-            function spawnEnemy() {
-                const enemy = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshPhongMaterial({color: 0xff0055}));
-                enemy.position.set(Math.random()*60-30, 0.5, Math.random()*60-30);
-                scene.add(enemy);
-                enemies.push(enemy);
-            }
-            for(let i=0; i<8; i++) spawnEnemy();
-
-            window.onclick = (e) => {
-                if(e.target.tagName === 'CANVAS') {
-                    sword.rotation.x = -Math.PI / 3;
-                    setTimeout(() => sword.rotation.x = 0, 100);
-                    
-                    enemies.forEach((enemy, index) => {
-                        if(player.position.distanceTo(enemy.position) < 4) {
-                            scene.remove(enemy);
-                            enemies.splice(index, 1);
-                            totalKills++;
-                            localStorage.setItem('reda_kills', totalKills);
-                            document.getElementById('total-kills').innerText = totalKills;
-                            spawnEnemy();
-                        }
-                    });
-                }
-            };
-
+            // تحريك الأطراف عند المشي
+            let walkTime = 0;
             const keys = {};
             window.onkeydown = (e) => keys[e.code] = true;
             window.onkeyup = (e) => keys[e.code] = false;
 
+            window.changeSkin = (color) => {
+                bodyParts.forEach(p => p.material.color.setHex(color));
+            };
+
             function animate() {
                 requestAnimationFrame(animate);
-                if (keys['KeyW']) player.translateZ(-0.2);
-                if (keys['KeyS']) player.translateZ(0.2);
-                if (keys['KeyA']) player.rotation.y += 0.05;
-                if (keys['KeyD']) player.rotation.y -= 0.05;
+                
+                let isMoving = false;
+                if(keys['KeyW']) { player.translateZ(-0.1); isMoving = true; }
+                if(keys['KeyS']) { player.translateZ(0.1); isMoving = true; }
+                if(keys['KeyA']) player.rotation.y += 0.05;
+                if(keys['KeyD']) player.rotation.y -= 0.05;
 
-                const offset = new THREE.Vector3(0, 5, 10).applyMatrix4(player.matrixWorld);
-                camera.position.lerp(offset, 0.1);
+                // تحريك اليدين والرجلين (Animation Logic)
+                if(isMoving) {
+                    walkTime += 0.2;
+                    armL.rotation.x = Math.sin(walkTime) * 0.5;
+                    armR.rotation.x = -Math.sin(walkTime) * 0.5;
+                    legL.rotation.x = -Math.sin(walkTime) * 0.5;
+                    legR.rotation.x = Math.sin(walkTime) * 0.5;
+                } else {
+                    bodyParts.forEach(p => p.rotation.x = 0);
+                }
+
+                camera.position.lerp(new THREE.Vector3(0, 5, 10).applyMatrix4(player.matrixWorld), 0.1);
                 camera.lookAt(player.position.x, player.position.y + 1, player.position.z);
                 renderer.render(scene, camera);
             }
