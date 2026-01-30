@@ -1,161 +1,117 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <title>The Blue Muse: Infinite Vector Engine</title>
+    <title>Roblox Clone JS</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #05040a; }
-        canvas { display: block; filter: drop-shadow(0 0 10px rgba(147, 197, 253, 0.3)); }
+        body { margin: 0; overflow: hidden; background: #000; }
+        #instructions {
+            position: absolute; top: 10px; left: 10px;
+            color: white; font-family: sans-serif;
+            background: rgba(0,0,0,0.5); padding: 10px;
+        }
     </style>
 </head>
 <body>
-<canvas id="v"></canvas>
+    <div id="instructions">WASD للتحرك | SPACE للقفز</div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
-<script>
-const canvas = document.getElementById('v');
-const ctx = canvas.getContext('2d');
-let w, h;
-const resize = () => { w = canvas.width = window.innerWidth; h = canvas.height = window.innerHeight; };
-window.onresize = resize; resize();
+    <script>
+        // 1. إعداد المشهد (Scene)
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87ceeb); // سماء زرقاء
 
-let frame = 0;
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
 
-// --- نظام رسم المسارات المعقدة (Precision Paths) ---
-const drawComplexPath = (path, color, stroke = null) => {
-    ctx.beginPath();
-    ctx.fillStyle = color;
-    path();
-    ctx.fill();
-    if(stroke) {
-        ctx.strokeStyle = stroke.color;
-        ctx.lineWidth = stroke.width;
-        ctx.stroke();
-    }
-};
+        // 2. الإضاءة (Lights)
+        const light = new THREE.DirectionalLight(0xffffff, 1);
+        light.position.set(10, 20, 10);
+        light.castShadow = true;
+        scene.add(light);
+        scene.add(new THREE.AmbientLight(0x404040));
 
-function renderCharacter() {
-    const t = frame * 0.04;
-    const coreY = Math.sin(t) * 8; // تنفس عميق
-    const coreRot = Math.sin(t * 0.5) * 0.03;
+        // 3. الأرضية (Baseplate)
+        const floorGeo = new THREE.BoxGeometry(100, 1, 100);
+        const floorMat = new THREE.MeshStandardMaterial({ color: 0x333333 });
+        const floor = new THREE.Mesh(floorGeo, floorMat);
+        floor.receiveShadow = true;
+        floor.position.y = -0.5;
+        scene.add(floor);
 
-    ctx.save();
-    ctx.translate(w/2, h/2 + 150);
+        // 4. صناعة شخصية روبلوكس (The Character)
+        const playerGroup = new THREE.Group();
+        
+        // الرأس
+        const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), new THREE.MeshStandardMaterial({color: 0xffdbac}));
+        head.position.y = 1.6;
+        playerGroup.add(head);
 
-    // 1. أرجل بتفاصيل الصورة (Boot Physics)
-    const leg = (ox, sockType) => {
-        ctx.save();
-        ctx.translate(ox, 0);
-        // الساق
-        ctx.fillStyle = "#fff5f0";
-        ctx.fillRect(-10, -50, 20, 100);
-        // الجوارب
-        if(sockType === 'dots') {
-            ctx.fillStyle = "#d8b4fe"; ctx.fillRect(-11, 0, 22, 60);
-            ctx.fillStyle = "rgba(0,0,0,0.15)";
-            [15, 30, 45].forEach(y => { ctx.beginPath(); ctx.arc(0, y, 4, 0, 7); ctx.fill(); });
-        } else {
-            ctx.fillStyle = "#ffffff"; ctx.fillRect(-11, 0, 22, 60);
-            ctx.fillStyle = "#9d174d"; // الربطة الحمراء فـ الصورة
-            ctx.beginPath(); ctx.arc(0, 5, 6, 0, 7); ctx.fill();
+        // الجسم (Torso)
+        const torso = new THREE.Mesh(new THREE.BoxGeometry(0.8, 1, 0.4), new THREE.MeshStandardMaterial({color: 0x0000ff}));
+        torso.position.y = 0.9;
+        playerGroup.add(torso);
+
+        // الأرجل
+        const legGeo = new THREE.BoxGeometry(0.35, 0.8, 0.35);
+        const lLeg = new THREE.Mesh(legGeo, new THREE.MeshStandardMaterial({color: 0x111111}));
+        lLeg.position.set(-0.2, 0.4, 0);
+        playerGroup.add(lLeg);
+        
+        const rLeg = new THREE.Mesh(legGeo, new THREE.MeshStandardMaterial({color: 0x111111}));
+        rLeg.position.set(0.2, 0.4, 0);
+        playerGroup.add(rLeg);
+
+        scene.add(playerGroup);
+
+        // 5. نظام التحكم
+        const keys = {};
+        let velocityY = 0;
+        let isJumping = false;
+
+        window.addEventListener('keydown', (e) => keys[e.code] = true);
+        window.addEventListener('keyup', (e) => keys[e.code] = false);
+
+        function update() {
+            const speed = 0.15;
+            if (keys['KeyW']) playerGroup.translateZ(-speed);
+            if (keys['KeyS']) playerGroup.translateZ(speed);
+            if (keys['KeyA']) playerGroup.rotation.y += 0.05;
+            if (keys['KeyD']) playerGroup.rotation.y -= 0.05;
+
+            // نظام القفز والجاذبية
+            if (keys['Space'] && !isJumping) {
+                velocityY = 0.2;
+                isJumping = true;
+            }
+            
+            playerGroup.position.y += velocityY;
+            if (playerGroup.position.y > 0) {
+                velocityY -= 0.01; // الجاذبية
+            } else {
+                playerGroup.position.y = 0;
+                velocityY = 0;
+                isJumping = false;
+            }
+
+            // الكاميرا تتبع اللاعب (Third Person)
+            const relativeCameraOffset = new THREE.Vector3(0, 3, 7);
+            const cameraOffset = relativeCameraOffset.applyMatrix4(playerGroup.matrixWorld);
+            camera.position.x = cameraOffset.x;
+            camera.position.y = cameraOffset.y;
+            camera.position.z = cameraOffset.z;
+            camera.lookAt(playerGroup.position);
         }
-        // الحذاء (Chunky Boots)
-        ctx.fillStyle = "#1e1b26";
-        ctx.beginPath(); ctx.roundRect(-20, 60, 45, 30, 10); ctx.fill();
-        ctx.restore();
-    };
-    leg(-35, 'dots'); leg(25, 'solid');
 
-    // 2. الفستان (The Pink Eye-Dress)
-    ctx.save();
-    ctx.translate(0, coreY);
-    ctx.rotate(coreRot);
-    
-    // تنورة الفستان (Bell Shape)
-    drawComplexPath(() => {
-        ctx.moveTo(-60, -80);
-        ctx.bezierCurveTo(-100, 50, 100, 50, 60, -80);
-    }, "#fbcfe8", {color: "#4a1d1d", width: 2});
+        function animate() {
+            requestAnimationFrame(animate);
+            update();
+            renderer.render(scene, camera);
+        }
 
-    // تفاصيل العيون فـ الفستان (حرفياً كما في الصورة)
-    const dressEye = (ex) => {
-        ctx.save(); ctx.translate(ex, 20);
-        ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.ellipse(0, 0, 12, 18, 0, 0, 7); ctx.fill();
-        ctx.fillStyle = "#111"; ctx.beginPath(); ctx.arc(0, 0, 6, 0, 7); ctx.fill();
-        ctx.restore();
-    };
-    dressEye(-35); dressEye(35);
-
-    // 3. الجزء العلوي (Jacket & Sleeves)
-    ctx.fillStyle = "#701a75"; // السترة البنفسجية
-    ctx.beginPath(); ctx.moveTo(-45, -80); ctx.lineTo(45, -80); ctx.lineTo(55, -30); ctx.lineTo(-55, -30); ctx.fill();
-    
-    // الأكمام المنفوخة (Puffy White)
-    ctx.fillStyle = "#fff";
-    ctx.beginPath(); ctx.ellipse(-55, -70, 20, 25, 0.4, 0, 7); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(55, -70, 20, 25, -0.4, 0, 7); ctx.fill();
-
-    // 4. الرأس (The Master Header)
-    ctx.save();
-    ctx.translate(0, -140);
-    
-    // الشعر الأزرق (Layered Shag)
-    ctx.fillStyle = "#93c5fd";
-    drawComplexPath(() => {
-        ctx.moveTo(-75, 40);
-        ctx.bezierCurveTo(-90, -100, 90, -100, 75, 40);
-        ctx.lineTo(60, 60); ctx.lineTo(-60, 60);
-    }, "#93c5fd");
-
-    // الوجه (Kawaii Proportions)
-    ctx.fillStyle = "#fff5f0";
-    ctx.beginPath(); ctx.ellipse(0, 10, 60, 55, 0, 0, 7); ctx.fill();
-
-    // العيون (Large Star-lit Eyes)
-    const eye = (ex) => {
-        ctx.save(); ctx.translate(ex, 5);
-        ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.ellipse(0, 0, 20, 24, 0, 0, 7); ctx.fill();
-        let iris = ctx.createRadialGradient(0,0,0,0,0,15);
-        iris.addColorStop(0, "#60a5fa"); iris.addColorStop(1, "#2563eb");
-        ctx.fillStyle = iris; ctx.beginPath(); ctx.ellipse(0, 0, 14, 18, 0, 0, 7); ctx.fill();
-        ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(-6, -8, 5, 0, 7); ctx.fill();
-        ctx.restore();
-    };
-    eye(-25); eye(25);
-
-    // النجوم (Earrings)
-    ctx.fillStyle = "#fbbf24";
-    const star = (sx) => { ctx.beginPath(); for(let i=0; i<5; i++) ctx.lineTo(sx+Math.cos(i*1.26)*10, 15+Math.sin(i*1.26)*10); ctx.fill(); };
-    star(-60); star(60);
-
-    // 5. القبعة (The Top Hat)
-    ctx.save();
-    ctx.rotate(-0.1);
-    ctx.translate(0, -70);
-    ctx.fillStyle = "#581c87"; ctx.fillRect(-45, -40, 90, 60);
-    ctx.fillStyle = "#fbbf24"; ctx.fillRect(-45, 0, 90, 10);
-    ctx.fillStyle = "#581c87"; ctx.beginPath(); ctx.roundRect(-65, 10, 130, 15, 5); ctx.fill();
-    ctx.restore();
-
-    ctx.restore();
-    ctx.restore();
-    ctx.restore();
-}
-
-function loop() {
-    ctx.fillStyle = "#05040a";
-    ctx.fillRect(0, 0, w, h);
-    
-    // إضاءة خلفية نيون
-    let g = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, w/1.5);
-    g.addColorStop(0, "rgba(88, 28, 135, 0.2)");
-    g.addColorStop(1, "transparent");
-    ctx.fillStyle = g; ctx.fillRect(0,0,w,h);
-
-    renderCharacter();
-    frame++;
-    requestAnimationFrame(loop);
-}
-loop();
-</script>
+        animate();
+    </script>
 </body>
 </html>
