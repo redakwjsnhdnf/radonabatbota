@@ -2,200 +2,200 @@
 <html lang="ar">
 <head>
     <meta charset="UTF-8">
-    <title>Neon Knight: Hollow Echo</title>
+    <title>Hollow Knight: The Ghost Echo</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #050508; }
-        canvas { display: block; cursor: crosshair; }
-        #ui {
-            position: absolute; top: 30px; left: 30px;
-            font-family: 'Palatino', serif; color: #e0e0e0;
-            pointer-events: none; letter-spacing: 2px;
+        body { margin: 0; overflow: hidden; background: #020205; cursor: none; }
+        #game-ui {
+            position: absolute; top: 40px; left: 40px;
+            font-family: 'Cinzel', serif; color: #fff; pointer-events: none;
         }
-        .soul-bar {
-            width: 200px; height: 10px; border: 1px solid #444;
-            background: rgba(255,255,255,0.1); margin-top: 10px;
+        .soul-container {
+            width: 60px; height: 60px; border: 3px solid #eee;
+            border-radius: 50%; display: flex; align-items: center;
+            justify-content: center; box-shadow: 0 0 20px rgba(255,255,255,0.2);
+            background: rgba(0,0,0,0.5);
         }
-        #soul-fill { width: 100%; height: 100%; background: #fff; box-shadow: 0 0 15px #fff; transition: 0.3s; }
+        #soul-inner {
+            width: 80%; height: 80%; background: #fff;
+            border-radius: 50%; box-shadow: 0 0 30px #fff;
+            filter: blur(2px); transition: 0.5s;
+        }
     </style>
 </head>
 <body>
 
-    <div id="ui">
-        <div style="font-size: 24px;">VOID_KNIGHT</div>
-        <div class="soul-bar"><div id="soul-fill"></div></div>
-        <div id="dialogue" style="margin-top: 20px; font-style: italic; opacity: 0.7;">الظلام يبتلع كل شيء...</div>
-    </div>
+<div id="game-ui">
+    <div class="soul-container"><div id="soul-inner"></div></div>
+</div>
 
-    <canvas id="gameCanvas"></canvas>
+<canvas id="stage"></canvas>
 
-    <script>
-        const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
+<script>
+const canvas = document.getElementById('stage');
+const ctx = canvas.getContext('2d');
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
 
-        let gameActive = true;
-        let frame = 0;
+let frame = 0;
+const keys = {};
 
-        // --- نظام الكاميرا والاهتزاز ---
-        let camera = { x: 0, y: 0, shake: 0 };
+const knight = {
+    x: 200, y: 0,
+    vx: 0, vy: 0,
+    w: 50, h: 80,
+    dir: 1,
+    isJumping: false,
+    scale: 1,
+    cloakAngle: 0
+};
 
-        // --- الساموراي (Hollow Knight Style) ---
-        const knight = {
-            x: 100, y: canvas.height - 150,
-            w: 40, h: 50,
-            vx: 0, vy: 0,
-            speed: 5, jump: -15,
-            gravity: 0.7,
-            isJumping: false,
-            dir: 1, // 1 لليمين، -1 لليسار
-            soul: 100
-        };
+// --- رسم الشخصية (The Ghost) بدقة ---
+function drawKnight() {
+    ctx.save();
+    ctx.translate(knight.x, knight.y);
+    
+    // أنيميشن التنفس والقفز
+    let breathe = Math.sin(frame * 0.05) * 2;
+    let jumpStretch = knight.vy * 0.1;
+    ctx.scale(knight.dir * (1 - Math.abs(jumpStretch)*0.1), 1 + jumpStretch*0.1);
 
-        // --- العوائق والبيئة ---
-        const platforms = [];
-        const particles = [];
+    // 1. العباءة (Cloak) - كتحرك مع الحركة
+    ctx.fillStyle = "#2a2a35";
+    ctx.beginPath();
+    ctx.moveTo(-25, 10);
+    // رفرفة العباءة بناءً على السرعة
+    let cloakWave = Math.sin(frame * 0.1 + knight.vx * 0.5) * 5;
+    ctx.bezierCurveTo(-30, 60 + cloakWave, 30, 60 + cloakWave, 25, 10);
+    ctx.fill();
 
-        // رسم الشخصية بأسلوب Hollow Knight
-        function drawKnight(x, y, dir) {
-            ctx.save();
-            ctx.translate(x + 20, y + 25);
-            ctx.scale(dir, 1);
-            
-            // العباءة (Cloak)
-            ctx.fillStyle = "#333344";
-            ctx.beginPath();
-            ctx.moveTo(-20, 0);
-            ctx.quadraticCurveTo(0, 40, 20, 0);
-            ctx.fill();
+    // 2. الجسم الداخلي (الظل)
+    ctx.fillStyle = "#000";
+    ctx.beginPath();
+    ctx.ellipse(0, 10, 15, 25, 0, 0, Math.PI * 2);
+    ctx.fill();
 
-            // الرأس (Mask)
-            ctx.fillStyle = "#eee";
-            ctx.beginPath();
-            ctx.arc(0, -15, 18, 0, Math.PI * 2);
-            ctx.fill();
+    // 3. الماسك (The Mask)
+    ctx.fillStyle = "#f8f8f8";
+    ctx.shadowBlur = 10;
+    ctx.shadowColor = "rgba(255,255,255,0.2)";
+    ctx.beginPath();
+    // رأس بيضاوي مع انحناءة لتحت
+    ctx.ellipse(0, -15 + breathe, 22, 25, 0, 0, Math.PI * 2);
+    ctx.fill();
 
-            // القرون (Horns)
-            ctx.beginPath();
-            ctx.moveTo(-10, -30); ctx.lineTo(-15, -45); ctx.lineTo(-5, -30);
-            ctx.moveTo(10, -30); ctx.lineTo(15, -45); ctx.lineTo(5, -30);
-            ctx.fill();
+    // 4. القرون (Horns)
+    ctx.beginPath();
+    // القرن الأيسر
+    ctx.moveTo(-12, -30 + breathe);
+    ctx.quadraticCurveTo(-25, -60 + breathe, -10, -45 + breathe);
+    ctx.lineTo(-5, -35 + breathe);
+    // القرن الأيمن
+    ctx.moveTo(12, -30 + breathe);
+    ctx.quadraticCurveTo(25, -60 + breathe, 10, -45 + breathe);
+    ctx.lineTo(5, -35 + breathe);
+    ctx.fill();
 
-            // العينين (Void Eyes)
-            ctx.fillStyle = "#000";
-            ctx.beginPath(); ctx.ellipse(-7, -15, 4, 7, 0, 0, Math.PI*2); ctx.fill();
-            ctx.beginPath(); ctx.ellipse(7, -15, 4, 7, 0, 0, Math.PI*2); ctx.fill();
+    // 5. العينين (Void Eyes)
+    ctx.fillStyle = "#050505";
+    ctx.shadowBlur = 0;
+    ctx.beginPath();
+    ctx.ellipse(-8, -12 + breathe, 5, 9, 0.1, 0, Math.PI * 2); // عين يسرى
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(8, -12 + breathe, 5, 9, -0.1, 0, Math.PI * 2); // عين يمنى
+    ctx.fill();
 
-            ctx.restore();
-        }
+    ctx.restore();
+}
 
-        // رسم خلفية ضبابية (Parallax Fog)
-        function drawAtmosphere() {
-            // دوائر ضوئية خافتة في الخلفية
-            ctx.globalAlpha = 0.05;
-            ctx.fillStyle = "#445577";
-            for(let i=0; i<5; i++) {
-                ctx.beginPath();
-                ctx.arc((frame*2 + i*400)%canvas.width, 200 + i*100, 200, 0, Math.PI*2);
-                ctx.fill();
-            }
-            ctx.globalAlpha = 1;
-        }
-
-        function createParticles(x, y, color) {
-            for(let i=0; i<10; i++) {
-                particles.push({
-                    x, y, 
-                    vx: (Math.random()-0.5)*5, 
-                    vy: (Math.random()-0.5)*5,
-                    life: 1,
-                    color: color || "#fff"
-                });
-            }
-        }
-
-        function update() {
-            if(!gameActive) return;
-
-            // تحريك اللاعب
-            knight.vy += knight.gravity;
-            knight.y += knight.vy;
-            knight.x += knight.vx;
-
-            // اصطدام بالأرض
-            if(knight.y > canvas.height - 100) {
-                knight.y = canvas.height - 100;
-                knight.vy = 0;
-                knight.isJumping = false;
-            }
-
-            // حدود الشاشة
-            if(knight.x < 0) knight.x = 0;
-            if(knight.x > canvas.width - 40) knight.x = canvas.width - 40;
-
-            // تحديث الجزيئات
-            particles.forEach((p, i) => {
-                p.x += p.vx; p.y += p.vy; p.life -= 0.02;
-                if(p.life <= 0) particles.splice(i, 1);
-            });
-
-            frame++;
-        }
-
-        function draw() {
-            // خلفية متدرجة (Gradient)
-            let grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-            grad.addColorStop(0, "#050508");
-            grad.addColorStop(1, "#151525");
-            ctx.fillStyle = grad;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-            drawAtmosphere();
-
-            // رسم الأرضية بأسلوب يدوي
-            ctx.fillStyle = "#0a0a0f";
-            ctx.fillRect(0, canvas.height - 100, canvas.width, 100);
-            ctx.strokeStyle = "#222233";
-            ctx.lineWidth = 4;
-            ctx.strokeRect(0, canvas.height - 100, canvas.width, 5);
-
-            // رسم الجزيئات (مثل الغبار المتطاير فـ Hollow Knight)
-            particles.forEach(p => {
-                ctx.globalAlpha = p.life;
-                ctx.fillStyle = p.color;
-                ctx.beginPath(); ctx.arc(p.x, p.y, 2, 0, Math.PI*2); ctx.fill();
-            });
-            ctx.globalAlpha = 1;
-
-            drawKnight(knight.x, knight.y, knight.dir);
-
-            update();
-            requestAnimationFrame(draw);
-        }
-
-        // التحكم الاحترافي
-        const keys = {};
-        window.addEventListener('keydown', e => {
-            keys[e.code] = true;
-            if(e.code === 'Space' && !knight.isJumping) {
-                knight.vy = knight.jump;
-                knight.isJumping = true;
-                createParticles(knight.x+20, knight.y+50, "#444");
-            }
+// --- بيئة غامضة (Ambience) ---
+const particles = [];
+function createMote() {
+    if (Math.random() > 0.95) {
+        particles.push({
+            x: Math.random() * canvas.width,
+            y: Math.random() * canvas.height,
+            s: Math.random() * 2,
+            v: Math.random() * 0.5
         });
-        window.addEventListener('keyup', e => keys[e.code] = false);
+    }
+}
 
-        function handleInput() {
-            knight.vx = 0;
-            if(keys['ArrowRight'] || keys['KeyD']) { knight.vx = knight.speed; knight.dir = 1; }
-            if(keys['ArrowLeft'] || keys['KeyA']) { knight.vx = -knight.speed; knight.dir = -1; }
-            
-            requestAnimationFrame(handleInput);
-        }
+function drawEnvironment() {
+    // ضبابة خفيفة
+    let grd = ctx.createRadialGradient(knight.x, knight.y, 10, knight.x, knight.y, 400);
+    grd.addColorStop(0, "rgba(40, 50, 80, 0.15)");
+    grd.addColorStop(1, "transparent");
+    ctx.fillStyle = grd;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        handleInput();
-        draw();
+    // ذرات الغبار
+    ctx.fillStyle = "rgba(255,255,255,0.3)";
+    particles.forEach((p, i) => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.s, 0, Math.PI*2);
+        ctx.fill();
+        p.y -= p.v;
+        if (p.y < 0) particles.splice(i, 1);
+    });
+}
 
-    </script>
+function update() {
+    // جاذبية وحركة
+    knight.vy += 0.8;
+    knight.y += knight.vy;
+    knight.x += knight.vx;
+
+    // الأرضية
+    if (knight.y > canvas.height - 150) {
+        knight.y = canvas.height - 150;
+        knight.vy = 0;
+        knight.isJumping = false;
+    }
+
+    // سلاسة الحركة (Inertia)
+    if (keys['ArrowRight'] || keys['KeyD']) {
+        knight.vx = Math.min(knight.vx + 1, 6);
+        knight.dir = 1;
+    } else if (keys['ArrowLeft'] || keys['KeyA']) {
+        knight.vx = Math.max(knight.vx - 1, -6);
+        knight.dir = -1;
+    } else {
+        knight.vx *= 0.8;
+    }
+
+    createMote();
+    frame++;
+}
+
+function render() {
+    ctx.fillStyle = "#020205";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    drawEnvironment();
+
+    // رسم الأرضية
+    ctx.fillStyle = "#050508";
+    ctx.fillRect(0, canvas.height - 150, canvas.width, 150);
+    ctx.strokeStyle = "#1a1a25";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(0, canvas.height - 150, canvas.width, 2);
+
+    drawKnight();
+    update();
+    requestAnimationFrame(render);
+}
+
+window.addEventListener('keydown', e => {
+    keys[e.code] = true;
+    if (e.code === 'Space' && !knight.isJumping) {
+        knight.vy = -18;
+        knight.isJumping = true;
+    }
+});
+window.addEventListener('keyup', e => keys[e.code] = false);
+
+render();
+</script>
 </body>
 </html>
