@@ -2,151 +2,163 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Roblox Web Studio</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Roblox Web Engine - Pro Edition</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        #gui { position: absolute; top: 20px; left: 20px; color: white; background: rgba(0,0,0,0.7); padding: 15px; border-radius: 8px; pointer-events: none; border: 1px solid #444; }
-        #crosshair { position: absolute; top: 50%; left: 50%; width: 10px; height: 10px; border: 2px solid white; border-radius: 50%; transform: translate(-50%, -50%); }
+        body { margin: 0; overflow: hidden; background-color: #000; font-family: 'Segoe UI', sans-serif; }
+        #overlay { position: absolute; width: 100%; height: 100%; display: flex; justify-content: center; align-items: center; background: rgba(0,0,0,0.5); color: white; cursor: pointer; z-index: 10; }
+        #ui-bar { position: absolute; top: 10px; right: 10px; display: flex; gap: 10px; }
+        .btn { background: rgba(255,255,255,0.2); border: 1px solid white; color: white; padding: 5px 15px; border-radius: 4px; font-size: 12px; }
     </style>
 </head>
 <body>
 
-<div id="gui">
-    <b style="color: #ff3e3e;">ROBLOX JS ENGINE</b><br>
-    • WASD: Move<br>
-    • SPACE: Jump<br>
-    • CLICK: Lock Mouse & Control Camera
-</div>
-<div id="crosshair"></div>
+<div id="overlay"><h1>Click to Play Roblox</h1></div>
+<div id="ui-bar"><div class="btn">v1.2.0</div><div class="btn">60 FPS</div></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <script>
-    // 1. الإعدادات الأساسية
+    // --- إعدادات المحرك (Engine Setup) ---
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x8ebcf3); // لون السماء التقليدي
-    
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    scene.background = new THREE.Color(0xaaccff);
+    scene.fog = new THREE.Fog(0xaaccff, 1, 300);
+
+    const camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.1, 1000);
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
     renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     document.body.appendChild(renderer.domElement);
 
-    // 2. إضاءة الاستوديو
-    const sun = new THREE.DirectionalLight(0xffffff, 1.2);
-    sun.position.set(50, 100, 50);
-    sun.castShadow = true;
-    scene.add(sun);
-    scene.add(new THREE.AmbientLight(0xffffff, 0.4));
+    // --- الإضاءة (Roblox Studio Lighting) ---
+    const ambient = new THREE.AmbientLight(0xffffff, 0.6);
+    scene.add(ambient);
 
-    // 3. الـ Baseplate (قلب روبلوكس)
-    const grid = new THREE.GridHelper(200, 40, 0x888888, 0x444444);
+    const sun = new THREE.DirectionalLight(0xffffff, 1.0);
+    sun.position.set(100, 200, 100);
+    sun.castShadow = true;
+    sun.shadow.camera.left = -50;
+    sun.shadow.camera.right = 50;
+    sun.shadow.camera.top = 50;
+    sun.shadow.camera.bottom = -50;
+    scene.add(sun);
+
+    // --- الأرضية (The Classic Baseplate) ---
+    const baseplateGeo = new THREE.BoxGeometry(200, 1, 200);
+    const baseplateMat = new THREE.MeshStandardMaterial({ color: 0x666666 });
+    const baseplate = new THREE.Mesh(baseplateGeo, baseplateMat);
+    baseplate.position.y = -0.5;
+    baseplate.receiveShadow = true;
+    scene.add(baseplate);
+
+    const grid = new THREE.GridHelper(200, 40, 0x888888, 0x555555);
     scene.add(grid);
 
-    const floor = new THREE.Mesh(
-        new THREE.PlaneGeometry(200, 200),
-        new THREE.MeshStandardMaterial({ color: 0x999999 })
-    );
-    floor.rotation.x = -Math.PI / 2;
-    floor.receiveShadow = true;
-    scene.add(floor);
-
-    // 4. اللاعب (The Character Model)
-    const player = new THREE.Group();
-    const mat = new THREE.MeshStandardMaterial({ color: 0x2196f3 });
-    const body = new THREE.Mesh(new THREE.BoxGeometry(1, 1.5, 0.6), mat);
-    body.position.y = 1.25;
-    body.castShadow = true;
-    player.add(body);
-
-    const head = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.6, 0.6), new THREE.MeshStandardMaterial({color: 0xffdbac}));
-    head.position.y = 2.4;
-    player.add(head);
-
-    scene.add(player);
-    player.position.set(0, 0, 0);
-
-    // 5. نظام الكاميرا والتحكم (Pointer Lock)
-    let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
-    let canJump = false;
-    let velocity = new THREE.Vector3();
-    let direction = new THREE.Vector3();
-
-    document.addEventListener('click', () => renderer.domElement.requestPointerLock());
+    // --- الشخصية (Standard R6 Character) ---
+    const char = new THREE.Group();
+    const bodyMat = new THREE.MeshStandardMaterial({ color: 0x3d85c6 });
+    const limbMat = new THREE.MeshStandardMaterial({ color: 0x3d85c6 });
     
+    const torso = new THREE.Mesh(new THREE.BoxGeometry(1, 1.2, 0.5), bodyMat);
+    torso.position.y = 1.6;
+    torso.castShadow = true;
+    char.add(torso);
+
+    const head = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.5, 0.5), new THREE.MeshStandardMaterial({color: 0xffdbac}));
+    head.position.y = 2.5;
+    char.add(head);
+
+    const lLeg = new THREE.Mesh(new THREE.BoxGeometry(0.45, 1, 0.45), limbMat);
+    lLeg.position.set(-0.25, 0.5, 0);
+    char.add(lLeg);
+
+    const rLeg = new THREE.Mesh(new THREE.BoxGeometry(0.45, 1, 0.45), limbMat);
+    rLeg.position.set(0.25, 0.5, 0);
+    char.add(rLeg);
+
+    scene.add(char);
+
+    // --- نظام التحكم والفيزياء (The Real Controller) ---
+    let velocity = new THREE.Vector3();
+    let moveForward = false, moveBackward = false, moveLeft = false, moveRight = false;
+    let yaw = 0, pitch = 0;
+    let isJumping = false;
+
+    const overlay = document.getElementById('overlay');
+    overlay.addEventListener('click', () => {
+        renderer.domElement.requestPointerLock();
+        overlay.style.display = 'none';
+    });
+
     document.addEventListener('mousemove', (e) => {
-        if (document.pointerLockElement === renderer.domElement) {
-            player.rotation.y -= e.movementX * 0.002;
-            // الكاميرا كتميل للفوق وللتحت (Pitch)
-            camera.rotation.x -= e.movementY * 0.002;
-            camera.rotation.x = Math.max(-Math.PI/3, Math.min(Math.PI/3, camera.rotation.x));
+        if (document.pointerLockElement) {
+            yaw -= e.movementX * 0.003;
+            pitch -= e.movementY * 0.003;
+            pitch = Math.max(-Math.PI / 3, Math.min(Math.PI / 3, pitch));
         }
     });
 
-    const onKeyDown = (e) => {
-        switch (e.code) {
-            case 'KeyW': moveForward = true; break;
-            case 'KeyS': moveBackward = true; break;
-            case 'KeyA': moveLeft = true; break;
-            case 'KeyD': moveRight = true; break;
-            case 'Space': if (canJump) velocity.y += 0.25; canJump = false; break;
-        }
+    const onKey = (val) => (e) => {
+        if (e.code === 'KeyW') moveForward = val;
+        if (e.code === 'KeyS') moveBackward = val;
+        if (e.code === 'KeyA') moveLeft = val;
+        if (e.code === 'KeyD') moveRight = val;
+        if (e.code === 'Space' && !isJumping && val) { velocity.y = 0.25; isJumping = true; }
     };
 
-    const onKeyUp = (e) => {
-        switch (e.code) {
-            case 'KeyW': moveForward = false; break;
-            case 'KeyS': moveBackward = false; break;
-            case 'KeyA': moveLeft = false; break;
-            case 'KeyD': moveRight = false; break;
-        }
-    };
+    document.addEventListener('keydown', onKey(true));
+    document.addEventListener('keyup', onKey(false));
 
-    document.addEventListener('keydown', onKeyDown);
-    document.addEventListener('keyup', onKeyUp);
-
-    // 6. محرك التحديث (Game Loop)
+    // --- محرك اللعبة (Game Loop) ---
     const clock = new THREE.Clock();
 
     function animate() {
         requestAnimationFrame(animate);
         const delta = clock.getDelta();
 
-        // فيزياء الحركة
-        velocity.x -= velocity.x * 10.0 * delta;
-        velocity.z -= velocity.z * 10.0 * delta;
-        velocity.y -= 0.8 * delta; // الجاذبية
+        // فيزياء الحركة (Damping)
+        const speed = 40.0;
+        const friction = 10.0;
+        velocity.x -= velocity.x * friction * delta;
+        velocity.z -= velocity.z * friction * delta;
+        velocity.y -= 0.7 * delta; // Gravity
 
-        direction.z = Number(moveForward) - Number(moveBackward);
-        direction.x = Number(moveRight) - Number(moveLeft);
-        direction.normalize();
+        let moveVec = new THREE.Vector3();
+        if (moveForward) moveVec.z -= 1;
+        if (moveBackward) moveVec.z += 1;
+        if (moveLeft) moveVec.x -= 1;
+        if (moveRight) moveVec.x += 1;
+        moveVec.normalize();
 
-        if (moveForward || moveBackward) velocity.z -= direction.z * 100.0 * delta;
-        if (moveLeft || moveRight) velocity.x -= direction.x * 100.0 * delta;
-
-        player.translateX(-velocity.x * delta);
-        player.translateZ(velocity.z * delta);
-        player.position.y += velocity.y;
-
-        if (player.position.y < 0) {
-            velocity.y = 0;
-            player.position.y = 0;
-            canJump = true;
+        if (moveForward || moveBackward || moveLeft || moveRight) {
+            const rotMove = moveVec.applyQuaternion(char.quaternion);
+            velocity.x += rotMove.x * speed * delta;
+            velocity.z += rotMove.z * speed * delta;
         }
 
-        // تثبيت الكاميرا خلف اللاعب (Orbit Follow)
-        const cameraOffset = new THREE.Vector3(0, 3, 8).applyQuaternion(player.quaternion);
-        camera.position.copy(player.position).add(cameraOffset);
-        camera.lookAt(player.position.x, player.position.y + 1.5, player.position.z);
+        char.position.x += velocity.x;
+        char.position.z += velocity.z;
+        char.position.y += velocity.y;
+        char.rotation.y = yaw;
+
+        if (char.position.y < 0) {
+            char.position.y = 0;
+            velocity.y = 0;
+            isJumping = false;
+        }
+
+        // تحكم الكاميرا (Orbital Follow)
+        const camDist = 12;
+        camera.position.set(
+            char.position.x + Math.sin(yaw) * Math.cos(pitch) * camDist,
+            char.position.y + Math.sin(pitch) * camDist + 4,
+            char.position.z + Math.cos(yaw) * Math.cos(pitch) * camDist
+        );
+        camera.lookAt(char.position.x, char.position.y + 1.5, char.position.z);
 
         renderer.render(scene, camera);
     }
-
-    window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
-    });
 
     animate();
 </script>
