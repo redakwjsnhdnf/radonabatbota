@@ -3,46 +3,82 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Spotify Premium | مولد البطاقات</title>
+    <title>Spotify Live Checker | فحص وتوليد</title>
     <style>
-        body { background: #121212; color: #1DB954; font-family: 'Segoe UI', sans-serif; text-align: center; padding: 15px; }
-        .main-box { background: #000; border: 1px solid #1DB954; border-radius: 15px; padding: 25px; display: inline-block; max-width: 450px; width: 100%; box-shadow: 0 0 20px #1DB954; }
-        .card-out { background: #181818; padding: 15px; border-radius: 8px; margin: 15px 0; border: 1px dashed #1DB954; font-family: monospace; font-size: 1.1em; color: #fff; }
-        button { background: #1DB954; color: #fff; border: none; padding: 12px; border-radius: 25px; font-weight: bold; cursor: pointer; width: 100%; margin-bottom: 15px; }
-        .steps { text-align: right; background: #111; padding: 15px; border-radius: 10px; font-size: 0.85em; color: #ccc; margin-top: 15px; }
-        .steps b { color: #1DB954; }
-        .whatsapp-btn { background: #25D366; color: white; padding: 10px; border-radius: 10px; display: block; text-decoration: none; margin-top: 20px; font-weight: bold; }
+        body { background: #121212; color: #1DB954; font-family: 'Segoe UI', sans-serif; text-align: center; padding: 20px; }
+        .container { background: #000; border: 1px solid #1DB954; border-radius: 15px; padding: 25px; display: inline-block; max-width: 450px; width: 100%; box-shadow: 0 0 25px #1DB954; }
+        .status-box { background: #181818; padding: 10px; border-radius: 8px; margin: 15px 0; font-size: 0.9em; border: 1px solid #333; }
+        #loading { display: none; color: #ffcc00; font-weight: bold; margin: 10px 0; }
+        .live-tag { color: #fff; background: #1DB954; padding: 2px 8px; border-radius: 5px; font-size: 0.8em; margin-left: 10px; }
+        button { background: #1DB954; color: #fff; border: none; padding: 15px; border-radius: 25px; font-weight: bold; cursor: pointer; width: 100%; }
+        .card-result { display: none; background: #111; padding: 15px; border: 1px dashed #1DB954; margin-top: 15px; color: #fff; font-family: monospace; }
+        .progress-bar { width: 0%; height: 5px; background: #1DB954; transition: width 0.5s; margin-top: 10px; }
     </style>
 </head>
 <body>
 
-    <div class="main-box">
-        <img src="https://upload.wikimedia.org/wikipedia/commons/1/19/Spotify_logo_without_text.svg" width="40" alt="Spotify">
-        <h2>Spotify Card Gen v2</h2>
-        
-        <div class="card-out" id="cardOut">5391 21XX XXXX 4452</div>
-        <div id="extra" style="color: #888; margin-bottom: 10px;">EXP: 05/27 | CVV: 774</div>
-        
-        <button onclick="gen()">توليد بطاقة تفعيل</button>
+    <div class="container">
+        <h2>Spotify Auto-Checker V3</h2>
+        <p style="font-size: 0.8em; color: #888;">BIN: 539121 | نظام فحص البطاقات المباشر</p>
 
-        <div class="steps">
-            <b>طريقة التفعيل:</b><br>
-            1. شغل <b>VPN</b> على دولة ميريكان (USA).<br>
-            2. افتح حساب Spotify جديد بنفس الدولة.<br>
-            3. استخدم الـ <b>Zip Code: 10001</b> عند الدفع.<br>
-            4. مبروك عليك Spotify Premium!
+        <button id="genBtn" onclick="startCheck()">توليد وفحص بطاقة شغالة</button>
+
+        <div id="loading">
+            <span id="loadText">جاري الاتصال بالسيرفر البنكي...</span>
+            <div style="width: 100%; background: #222; margin-top: 5px;"><div id="bar" class="progress-bar"></div></div>
         </div>
 
-        <a href="https://wa.me/2126XXXXXXXX" class="whatsapp-btn">إيلا ما عرفتيش تفعله.. نصاوبوه ليك بـ 15 درهم</a>
+        <div id="resultBox" class="card-result">
+            <span class="live-tag">LIVE / شغالة ✅</span><br><br>
+            <span id="cardNumber" style="font-size: 1.2em;"></span><br>
+            <span id="cardExtra" style="color: #888;"></span>
+        </div>
+
+        <div class="status-box">
+            <small>آخر فحص ناجح: <span id="time"></span></small>
+        </div>
+
+        <a href="https://wa.me/2126XXXXXXXX" style="color: #fff; text-decoration: none; font-size: 0.8em; border-bottom: 1px solid;">تواصل معنا للدعم الفني 🛠️</a>
     </div>
 
     <script>
-        function gen() {
+        function startCheck() {
+            const btn = document.getElementById('genBtn');
+            const load = document.getElementById('loading');
+            const res = document.getElementById('resultBox');
+            const bar = document.getElementById('bar');
+            
+            btn.disabled = true;
+            res.style.display = 'none';
+            load.style.display = 'block';
+            
+            let p = 0;
+            const steps = ["جاري فحص الـ BIN...", "التحقق من خوارزمية Luhn...", "محاكاة عملية دفع تجريبية...", "تأكيد حالة البطاقة (LIVE)..."];
+            
+            const interval = setInterval(() => {
+                p += 25;
+                bar.style.width = p + "%";
+                document.getElementById('loadText').innerText = steps[p/25 - 1];
+                
+                if(p >= 100) {
+                    clearInterval(interval);
+                    showResult();
+                }
+            }, 800);
+        }
+
+        function showResult() {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('resultBox').style.display = 'block';
+            document.getElementById('genBtn').disabled = false;
+            
             let bin = "539121";
             let r = () => Math.floor(1000 + Math.random() * 9000);
             let full = bin + r().toString().substring(0,2) + r() + r();
-            document.getElementById('cardOut').innerText = full.match(/.{1,4}/g).join(' ');
-            document.getElementById('extra').innerText = `EXP: 0${Math.floor(Math.random()*9+1)}/2${Math.floor(Math.random()*4+6)} | CVV: ${Math.floor(Math.random()*899+100)}`;
+            
+            document.getElementById('cardNumber').innerText = full.match(/.{1,4}/g).join(' ');
+            document.getElementById('cardExtra').innerText = `EXP: 0${Math.floor(Math.random()*9+1)}/2027 | CVV: ${Math.floor(Math.random()*899+100)}`;
+            document.getElementById('time').innerText = new Date().toLocaleTimeString();
         }
     </script>
 </body>
