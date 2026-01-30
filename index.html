@@ -2,85 +2,69 @@
 <html lang="ar">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>تجربة خيالية 3D</title>
+    <title>الهروب من مدينة النيون</title>
     <style>
-        body { margin: 0; overflow: hidden; background-color: #000; }
+        body { margin: 0; overflow: hidden; background: #0a0a0a; font-family: 'Courier New', Courier, monospace; }
         canvas { display: block; }
+        #ui {
+            position: absolute; top: 20px; left: 20px; color: #0ff;
+            font-size: 20px; text-shadow: 0 0 5px #0ff;
+        }
+        #story-box {
+            position: absolute; bottom: 30px; width: 100%; text-align: center;
+            color: #fff; font-size: 18px; background: rgba(0,0,0,0.6); padding: 10px 0;
+        }
     </style>
 </head>
 <body>
 
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "https://unpkg.com/three@0.160.0/build/three.module.js"
-            }
-        }
-    </script>
+    <div id="ui">الطاقة المتبقية: <span id="score">0</span>%</div>
+    <div id="story-box">المهمة: اهرب من المصنع.. اضغط على المسافة (Space) للقفز!</div>
+    <canvas id="gameCanvas"></canvas>
 
-    <script type="module">
-        import * as THREE from 'three';
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const storyEl = document.getElementById('story-box');
 
-        // 1. إعداد المشهد (Scene)
-        const scene = new THREE.Scene();
-        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        document.body.appendChild(renderer.domElement);
+        canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
 
-        // 2. إضافة النجوم (Stars)
-        const starGeometry = new THREE.BufferGeometry();
-        const starMaterial = new THREE.PointsMaterial({ color: 0xffffff });
-        const starVertices = [];
-        for (let i = 0; i < 10000; i++) {
-            const x = (Math.random() - 0.5) * 2000;
-            const y = (Math.random() - 0.5) * 2000;
-            const z = -Math.random() * 2000;
-            starVertices.push(x, y, z);
-        }
-        starGeometry.setAttribute('position', new THREE.Float32BufferAttribute(starVertices, 3));
-        const stars = new THREE.Points(starGeometry, starMaterial);
-        scene.add(stars);
+        // --- إعدادات الشخصية ---
+        let player = {
+            x: 100, y: canvas.height / 2,
+            width: 40, height: 40,
+            gravity: 0.6, lift: -12, velocity: 0
+        };
 
-        // 3. إضافة كوكب خيالي (The Planet)
-        const geometry = new THREE.IcosahedronGeometry(1, 15);
-        const material = new THREE.MeshStandardMaterial({ 
-            color: 0x44aa88, 
-            wireframe: true,
-            emissive: 0x112244
-        });
-        const planet = new THREE.Mesh(geometry, material);
-        scene.add(planet);
+        let obstacles = [];
+        let score = 0;
+        let frame = 0;
+        let gameActive = true;
 
-        // 4. الإضاءة (Lighting)
-        const light = new THREE.PointLight(0xffffff, 50, 100);
-        light.position.set(5, 5, 5);
-        scene.add(light);
-        scene.add(new THREE.AmbientLight(0x333333));
+        // قصة تفاعلية على حسب السكور
+        const updates = {
+            20: "لقد تجاوزت المنطقة الأمنية.. استمر!",
+            50: "أنت الآن في أنابيب التهوية، الضوء يقترب!",
+            80: "النظام ينهار! اهرب بسرعة!",
+            100: "لقد فعلتها! مرحبا بك في العالم الخارجي."
+        };
 
-        camera.position.z = 3;
-
-        // 5. وظيفة التحريك (Animation)
-        function animate() {
-            requestAnimationFrame(animate);
-
-            planet.rotation.y += 0.005;
-            planet.rotation.x += 0.002;
-            
-            stars.rotation.z += 0.0005;
-
-            renderer.render(scene, camera);
+        function drawPlayer() {
+            ctx.fillStyle = '#0ff';
+            ctx.shadowBlur = 15;
+            ctx.shadowColor = '#0ff';
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+            ctx.shadowBlur = 0;
         }
 
-        // التعامل مع تغيير حجم النافذة
-        window.addEventListener('resize', () => {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
-        });
-
-        animate();
-    </script>
-</body>
-</html>
+        function createObstacle() {
+            let gap = 200;
+            let topHeight = Math.random() * (canvas.height / 2);
+            obstacles.push({
+                x: canvas.width,
+                top: topHeight,
+                bottom: canvas.height - (topHeight + gap),
+                width: 50
+            });
