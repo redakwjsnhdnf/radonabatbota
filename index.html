@@ -2,109 +2,41 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Radona Batbota | Secret Vault</title>
+    <title>Pro-Burner | مولد الهويات السرية</title>
     <style>
-        body { background: #000; color: #0f0; font-family: 'Courier New', monospace; padding: 20px; text-align: center; }
-        .box { border: 2px solid #0f0; padding: 20px; border-radius: 10px; max-width: 600px; margin: 20px auto; box-shadow: 0 0 15px #0f0; }
-        textarea { width: 90%; height: 80px; background: #111; color: #0f0; border: 1px solid #0f0; padding: 10px; margin: 10px 0; }
-        button { background: #0f0; color: #000; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; width: 100%; transition: 0.3s; }
-        button:hover { background: #fff; box-shadow: 0 0 20px #fff; }
-        canvas { display: none; }
-        #outputImg { max-width: 100%; margin-top: 20px; border: 1px solid #fff; display: none; }
-        .tab { display: flex; justify-content: space-around; margin-bottom: 20px; }
-        .tab-btn { background: none; color: #0f0; border: 1px solid #0f0; width: 45%; }
-        .active { background: #0f0; color: #000; }
+        body { background: #0a0a0a; color: #00d4ff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; padding: 50px; }
+        .card { background: #1a1a1a; border: 1px solid #00d4ff; border-radius: 15px; padding: 20px; display: inline-block; box-shadow: 0 0 20px #00d4ff; }
+        img { border-radius: 50%; border: 3px solid #00d4ff; width: 150px; margin-bottom: 15px; }
+        .info { font-size: 1.2em; margin: 10px 0; }
+        button { background: #00d4ff; color: #000; border: none; padding: 15px 30px; border-radius: 5px; cursor: pointer; font-weight: bold; font-size: 1.1em; }
+        button:hover { background: #fff; }
+        .vip { margin-top: 20px; color: #ff0055; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
+    <h1>[ GENERATOR-X ]</h1>
+    <p>احصل على هوية رقمية كاملة للتسجيل في المواقع وتجنب التجسس</p>
 
-    <h1>[ RADONA-STEGANO-V1 ]</h1>
-
-    <div class="box">
-        <div class="tab">
-            <button class="tab-btn active" onclick="showTab('encode')">تشفير (إخفاء)</button>
-            <button class="tab-btn" onclick="showTab('decode')">فك التشفير (إظهار)</button>
-        </div>
-
-        <div id="encodeSection">
-            <input type="file" id="upload" accept="image/*"><br>
-            <textarea id="message" placeholder="اكتب السر هنا..."></textarea><br>
-            <button onclick="encode()">توليد الصورة المشفرة</button>
-            <img id="outputImg">
-        </div>
-
-        <div id="decodeSection" style="display:none;">
-            <p>ارفع الصورة التي استلمتها لرؤية السر:</p>
-            <input type="file" id="uploadDecode" accept="image/*"><br><br>
-            <button onclick="decode()">كشف السر المحتجب</button>
-            <div id="decodedMessage" style="margin-top:20px; font-size: 1.5em; color: yellow;"></div>
-        </div>
+    <div class="card" id="identityCard">
+        <img id="avatar" src="https://via.placeholder.com/150" alt="Avatar">
+        <div class="info">الاسم: <span id="name">....</span></div>
+        <div class="info">الإيميل: <span id="email">....</span></div>
+        <div class="info">المدينة: <span id="city">....</span></div>
+        <br>
+        <button onclick="generateIdentity()">توليد هوية جديدة</button>
+        <div class="vip" onclick="alert('تواصل مع @YourTelegram للحصول على بروكسي خاص')">★ نسخة الـ VIP (بروكسي + هاتف وهمي) بـ 10 دراهم ★</div>
     </div>
 
-    <canvas id="canvas"></canvas>
-
     <script>
-        function showTab(type) {
-            document.getElementById('encodeSection').style.display = type === 'encode' ? 'block' : 'none';
-            document.getElementById('decodeSection').style.display = type === 'decode' ? 'block' : 'none';
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active'));
-        }
+        async function generateIdentity() {
+            const response = await fetch('https://randomuser.me/api/');
+            const data = await response.json();
+            const user = data.results[0];
 
-        const canvas = document.getElementById('canvas');
-        const ctx = canvas.getContext('2d');
-
-        function encode() {
-            const file = document.getElementById('upload').files[0];
-            const msg = document.getElementById('message').value;
-            if(!file || !msg) return alert("أدخل الصورة والرسالة أولاً!");
-
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const img = new Image();
-                img.onload = () => {
-                    canvas.width = img.width; canvas.height = img.height;
-                    ctx.drawImage(img, 0, 0);
-                    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                    const binaryMsg = Array.from(new TextEncoder().encode(msg + "##END##")).map(b => b.toString(2).padStart(8, '0')).join('');
-                    
-                    for (let i = 0; i < binaryMsg.length; i++) {
-                        imgData.data[i * 4] = (imgData.data[i * 4] & 0xFE) | parseInt(binaryMsg[i]);
-                    }
-                    ctx.putImageData(imgData, 0, 0);
-                    const out = document.getElementById('outputImg');
-                    out.src = canvas.toDataURL();
-                    out.style.display = "block";
-                    alert("تم التشفير! اضغط مطولاً على الصورة لحفظها.");
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        }
-
-        function decode() {
-            const file = document.getElementById('uploadDecode').files[0];
-            if(!file) return alert("ارفع الصورة أولاً!");
-
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                const img = new Image();
-                img.onload = () => {
-                    canvas.width = img.width; canvas.height = img.height;
-                    ctx.drawImage(img, 0, 0);
-                    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-                    let binary = "";
-                    for (let i = 0; i < imgData.data.length / 4; i++) {
-                        binary += (imgData.data[i * 4] & 1).toString();
-                    }
-                    const bytes = binary.match(/.{1,8}/g).map(b => parseInt(b, 2));
-                    const decoded = new TextDecoder().decode(new Uint8Array(bytes));
-                    const result = decoded.split("##END##")[0];
-                    document.getElementById('decodedMessage').innerText = "الرسالة السرية: " + result;
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
+            document.getElementById('name').innerText = user.name.first + " " + user.name.last;
+            document.getElementById('email').innerText = user.email;
+            document.getElementById('city').innerText = user.location.city;
+            document.getElementById('avatar').src = user.picture.large;
         }
     </script>
 </body>
