@@ -2,42 +2,30 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Radona AI | Premium Prompt Library</title>
+    <title>MangaAI - Instant Manhwa Translator</title>
     <style>
-        :root { --accent: #7c3aed; --bg: #020617; }
-        body { background: var(--bg); color: #fff; font-family: 'Inter', sans-serif; text-align: center; margin: 0; }
-        .hero { padding: 80px 20px; background: radial-gradient(circle at center, #1e1b4b 0%, #020617 100%); }
-        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; padding: 40px; }
-        .prompt-card { background: #0f172a; border: 1px solid #1e293b; padding: 20px; border-radius: 12px; text-align: left; transition: 0.3s; }
-        .prompt-card:hover { border-color: var(--accent); box-shadow: 0 0 20px rgba(124, 58, 237, 0.2); }
-        .copy-btn { background: var(--accent); color: white; border: none; padding: 10px; border-radius: 6px; cursor: pointer; width: 100%; font-weight: bold; }
-        .tag { background: #1e293b; font-size: 10px; padding: 4px 8px; border-radius: 4px; text-transform: uppercase; }
+        body { background: #050505; color: #fff; font-family: 'Inter', sans-serif; text-align: center; }
+        .upload-zone { border: 2px dashed #ff4757; padding: 50px; margin: 50px auto; max-width: 600px; border-radius: 20px; cursor: pointer; }
+        .upload-zone:hover { background: #111; }
+        .preview { display: flex; justify-content: center; gap: 20px; margin-top: 20px; }
+        img { max-width: 45%; border-radius: 10px; border: 1px solid #333; }
+        .btn { background: #ff4757; color: white; padding: 15px 40px; border: none; border-radius: 50px; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
+    <h1>MangaAI Translator ⚡</h1>
+    <p>Upload your Raw Manhwa page and get it translated in seconds!</p>
 
-    <div class="hero">
-        <h1 style="font-size: 3em;">Master the AI Era 🤖</h1>
-        <p style="color: #94a3b8;">Unlock the full potential of ChatGPT & Midjourney with our expert prompts.</p>
+    <div class="upload-zone" id="drop-zone">
+        <i class="fas fa-cloud-upload-alt" style="font-size: 3em;"></i>
+        <p>Click or Drag & Drop Manga Page Here</p>
     </div>
 
-    <div class="grid">
-        <div class="prompt-card">
-            <span class="tag">ChatGPT</span>
-            <h3>SEO Article Master</h3>
-            <p style="color: #64748b; font-size: 0.9em;">Generate a 2000-word SEO-optimized article in seconds.</p>
-            <button class="copy-btn" onclick="alert('Join Pro to Copy!')">Get Prompt - $1</button>
-        </div>
+    <button class="btn">Translate Now (Free)</button>
 
-        <div class="prompt-card">
-            <span class="tag">Midjourney</span>
-            <h3>Ultra-Realistic Portrait</h3>
-            <p style="color: #64748b; font-size: 0.9em;">Create hyper-realistic human portraits with perfect lighting.</p>
-            <button class="copy-btn" onclick="alert('Join Pro to Copy!')">Get Prompt - $1</button>
-        </div>
+    <div class="preview">
+        <div><small>Original (RAW)</small><br><img src="https://via.placeholder.com/300x500?text=Japanese+Raw" alt="Raw"></div>
+        <div><small>Translated (AI)</small><br><img src="https://via.placeholder.com/300x500?text=Arabic+Translation" alt="Translated"></div>
     </div>
-
-    <p style="margin-top: 50px; color: #475569;">Accepting: Crypto, PayPal, Stripe</p>
-
 </body>
 </html>
