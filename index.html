@@ -2,166 +2,186 @@
 <html lang="ar">
 <head>
     <meta charset="UTF-8">
-    <title>Character Engine: The Blue Muse</title>
+    <title>The Infinite Doll - Final Code</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #0a0510; cursor: crosshair; }
-        canvas { display: block; filter: contrast(1.1) brightness(1.1); }
-        #ui {
-            position: absolute; bottom: 30px; width: 100%; text-align: center;
-            font-family: 'Georgia', serif; color: #ffccff; letter-spacing: 3px;
-            text-shadow: 0 0 10px #ff00ff; pointer-events: none;
+        body { margin: 0; overflow: hidden; background: #050208; }
+        canvas { display: block; filter: contrast(1.1) saturate(1.3); }
+        #overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at center, transparent, rgba(0,0,0,0.4));
+            pointer-events: none;
         }
     </style>
 </head>
 <body>
-
-<div id="ui">CHAR_CODE: BLUE_STAR_MUSE</div>
-<canvas id="stage"></canvas>
+    <div id="overlay"></div>
+    <canvas id="c"></canvas>
 
 <script>
-const canvas = document.getElementById('stage');
+const canvas = document.getElementById('c');
 const ctx = canvas.getContext('2d');
-let w = canvas.width = window.innerWidth;
-let h = canvas.height = window.innerHeight;
+let w, h;
+const setSize = () => { w = canvas.width = window.innerWidth; h = canvas.height = window.innerHeight; };
+window.onresize = setSize; setSize();
 
 let frame = 0;
-const mouse = { x: w/2, y: h/2 };
 
-// --- نظام الإضاءة (Dynamic Rim Lighting) ---
-function applyGlow(color, blur) {
-    ctx.shadowBlur = blur;
-    ctx.shadowColor = color;
+// --- نظام رسم الأجزاء المعقدة ---
+function drawPath(points, color, close = true) {
+    ctx.beginPath();
+    ctx.fillStyle = color;
+    ctx.moveTo(points[0].x, points[0].y);
+    for (let i = 1; i < points.length; i++) {
+        ctx.lineTo(points[i].x, points[i].y);
+    }
+    if (close) ctx.closePath();
+    ctx.fill();
 }
 
-// --- رسم ملامح الشخصية بالدقة الكاملة ---
-function drawCharacter(x, y) {
-    let breathe = Math.sin(frame * 0.04) * 5;
-    let sway = Math.sin(frame * 0.02) * 0.02;
+function drawFinalCharacter() {
+    let t = frame * 0.05;
+    let breathe = Math.sin(t) * 4;
+    let sway = Math.sin(t * 0.5) * 3;
 
     ctx.save();
-    ctx.translate(x, y + breathe);
-    ctx.rotate(sway);
+    ctx.translate(w/2, h/2 + 100);
 
-    // 1. الساقين والجوارب (Asymmetric Socks)
-    // الساق اليمنى (جوارب بنفسجية منقطة)
-    ctx.fillStyle = "#222"; ctx.fillRect(10, 110, 20, 50); // الحذاء
-    ctx.fillStyle = "#d8b4fe"; ctx.fillRect(10, 70, 20, 40); // الجورب
-    ctx.fillStyle = "#fff"; ctx.beginPath(); ctx.arc(15, 80, 3, 0, Math.PI*2); ctx.fill(); // نقط
+    // 1. الأرجل والحذاء (التفاصيل الدقيقة)
+    const drawLeg = (ox, sockColor, dots = false) => {
+        ctx.save();
+        ctx.translate(ox, 0);
+        // الساق
+        ctx.fillStyle = "#fff5f0";
+        ctx.fillRect(-8, 0, 16, 80);
+        // الجورب
+        ctx.fillStyle = sockColor;
+        ctx.fillRect(-9, 40, 18, 50);
+        if(dots) { // الجورب المنقط
+            ctx.fillStyle = "rgba(0,0,0,0.2)";
+            for(let i=0; i<3; i++) ctx.beginPath(), ctx.arc(0, 50 + i*15, 3, 0, 7), ctx.fill();
+        }
+        // الحذاء الضخم
+        ctx.fillStyle = "#1a1a1a";
+        ctx.beginPath();
+        ctx.roundRect(-15, 90, 35, 25, 10);
+        ctx.fill();
+        ctx.restore();
+    };
+    drawLeg(-25, "#d8b4fe", true); // اليمين
+    drawLeg(15, "#ffffff", false); // اليسار
 
-    // الساق اليسرى (جوارب بيضاء مع ربطة)
-    ctx.fillStyle = "#222"; ctx.fillRect(-30, 110, 20, 50);
-    ctx.fillStyle = "#fff"; ctx.fillRect(-30, 70, 20, 40);
-    ctx.fillStyle = "#9d174d"; ctx.beginPath(); ctx.arc(-20, 75, 4, 0, Math.PI*2); ctx.fill(); // الربطة
-
-    // 2. الفستان (The Pink Dress)
-    ctx.fillStyle = "#fbcfe8"; // وردي فاتح
-    ctx.beginPath();
-    ctx.moveTo(-40, 0);
-    ctx.bezierCurveTo(-60, 80, 60, 80, 40, 0);
-    ctx.fill();
-    // العيون اللي فالفستان (Design)
-    ctx.fillStyle = "#fff";
-    ctx.beginPath(); ctx.ellipse(-25, 50, 8, 12, 0, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(25, 50, 8, 12, 0, 0, Math.PI*2); ctx.fill();
-    ctx.fillStyle = "#000";
-    ctx.beginPath(); ctx.circle = ctx.arc(-25, 50, 4, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.circle = ctx.arc(25, 50, 4, 0, Math.PI*2); ctx.fill();
-
-    // 3. الأكمام والسترة (Purple Jacket)
-    ctx.fillStyle = "#86198f"; // أرجواني غامق
-    ctx.beginPath(); // سترة
-    ctx.moveTo(-35, -30); ctx.lineTo(35, -30); ctx.lineTo(45, 10); ctx.lineTo(-45, 10); ctx.closePath(); ctx.fill();
+    // 2. الفستان الوردي (Layered Skirt)
+    ctx.save();
+    ctx.translate(0, breathe);
+    ctx.rotate(sway * 0.01);
     
-    // الأكمام المنفوخة (Puffy Sleeves)
-    ctx.fillStyle = "#fff";
-    ctx.beginPath(); ctx.ellipse(-45, -20, 15, 20, 0.5, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(45, -20, 15, 20, -0.5, 0, Math.PI*2); ctx.fill();
-
-    // 4. الرأس والشعر (Blue Hair)
-    ctx.save();
-    let hairSway = Math.sin(frame * 0.05) * 3;
-    ctx.fillStyle = "#93c5fd"; // أزرق سماوي
-    // رسم الشعر قطعة بقطعة (Hand-drawn style)
+    // الفستان
+    ctx.fillStyle = "#fbcfe8";
     ctx.beginPath();
-    ctx.moveTo(-55, -30);
-    ctx.bezierCurveTo(-70, -100, 70, -100, 55, -30);
-    ctx.lineTo(60 + hairSway, 10);
-    ctx.lineTo(-60 - hairSway, 10);
+    ctx.moveTo(-50, -40);
+    ctx.bezierCurveTo(-90, 80, 90, 80, 50, -40);
+    ctx.fill();
+    // حدود سوداء رقيقة (بحال صورتك)
+    ctx.lineWidth = 2; ctx.strokeStyle = "#401020"; ctx.stroke();
+
+    // العيون التصميمية فالفستان
+    const drawDressEye = (ex, ey) => {
+        ctx.fillStyle = "#fff";
+        ctx.beginPath(); ctx.ellipse(ex, ey, 12, 18, 0, 0, 7); ctx.fill();
+        ctx.fillStyle = "#000";
+        ctx.beginPath(); ctx.arc(ex, ey, 6, 0, 7); ctx.fill();
+    };
+    drawDressEye(-35, 35); drawDressEye(35, 35);
+    ctx.restore();
+
+    // 3. الجزء العلوي (Jacket & Sleeves)
+    ctx.save();
+    ctx.translate(0, -50 + breathe * 0.5);
+    // الأكمام المنفوخة
+    ctx.fillStyle = "#fff";
+    ctx.beginPath(); ctx.ellipse(-50, 0, 18, 25, 0.4, 0, 7); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(50, 0, 18, 25, -0.4, 0, 7); ctx.fill();
+    // السترة البنفسجية
+    ctx.fillStyle = "#701a75";
+    ctx.beginPath();
+    ctx.moveTo(-40, -20); ctx.lineTo(40, -20);
+    ctx.lineTo(50, 30); ctx.lineTo(-50, 30);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+
+    // 4. الرأس (التحفة الفنية)
+    ctx.save();
+    ctx.translate(0, -110 + breathe * 0.3);
+    
+    // الشعر الأزرق (خصلات متحركة)
+    ctx.fillStyle = "#93c5fd";
+    ctx.beginPath();
+    ctx.moveTo(-70, 0);
+    ctx.bezierCurveTo(-90, -120, 90, -120, 70, 0);
+    // خصلات الشعر الجانبية
+    for(let i=0; i<6; i++) {
+        let hsway = Math.sin(t + i) * 5;
+        ctx.quadraticCurveTo(80 + hsway, -20 + i*15, 60, 40);
+    }
     ctx.fill();
 
     // الوجه
-    ctx.fillStyle = "#fff5f0"; // بشرة فاتحة
-    ctx.beginPath();
-    ctx.ellipse(0, -35, 45, 40, 0, 0, Math.PI*2);
-    ctx.fill();
+    ctx.fillStyle = "#fff5f0";
+    ctx.beginPath(); ctx.ellipse(0, -15, 55, 50, 0, 0, 7); ctx.fill();
 
-    // العيون (The Large Blue Eyes)
-    applyGlow("#0ff", 10);
-    ctx.fillStyle = "#fff";
-    ctx.beginPath(); ctx.ellipse(-18, -35, 14, 16, 0, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.ellipse(18, -35, 14, 16, 0, 0, Math.PI*2); ctx.fill();
-    
-    ctx.fillStyle = "#60a5fa"; // بؤبؤ أزرق
-    ctx.beginPath(); ctx.arc(-18, -35, 8, 0, Math.PI*2); ctx.fill();
-    ctx.beginPath(); ctx.arc(18, -35, 8, 0, Math.PI*2); ctx.fill();
-    
-    ctx.shadowBlur = 0;
-
-    // النجوم ف الأذنين (Star Earrings)
-    ctx.fillStyle = "#fbbf24";
-    const drawStar = (cx, cy) => {
-        ctx.beginPath();
-        for(let i=0; i<5; i++) {
-            ctx.lineTo(cx + Math.cos(i*1.2)*8, cy + Math.sin(i*1.2)*8);
-        }
-        ctx.fill();
+    // العيون الكبيرة (High Detail)
+    const drawEye = (ex) => {
+        ctx.save(); ctx.translate(ex, -20);
+        // بياض العين
+        ctx.fillStyle = "#fff";
+        ctx.beginPath(); ctx.ellipse(0, 0, 18, 22, 0, 0, 7); ctx.fill();
+        // البؤبؤ الأزرق المتدرج
+        let eg = ctx.createRadialGradient(0,0,0,0,0,15);
+        eg.addColorStop(0, "#60a5fa"); eg.addColorStop(1, "#1d4ed8");
+        ctx.fillStyle = eg;
+        ctx.beginPath(); ctx.ellipse(0, 0, 12, 16, 0, 0, 7); ctx.fill();
+        // لمعة العين (Sparkle)
+        ctx.fillStyle = "#fff";
+        ctx.beginPath(); ctx.arc(-5, -8, 4, 0, 7); ctx.fill();
+        ctx.restore();
     };
-    drawStar(-48, -20); drawStar(48, -20);
+    drawEye(-22); drawEye(22);
 
-    // 5. القبعة (The Top Hat)
-    ctx.translate(0, -80);
-    ctx.rotate(-0.1);
-    ctx.fillStyle = "#701a75";
-    ctx.fillRect(-35, 0, 70, 45); // القبعة
-    ctx.fillStyle = "#fbbf24"; ctx.fillRect(-35, 30, 70, 8); // الشريط الذهبي
-    ctx.fillStyle = "#701a75"; ctx.fillRect(-45, 38, 90, 8); // حافة القبعة
-    
+    // النجوم الذهبية
+    ctx.fillStyle = "#fbbf24";
+    const star = (sx, sy) => {
+        ctx.beginPath(); for(let i=0; i<5; i++) ctx.lineTo(sx+Math.cos(i*1.26)*10, sy+Math.sin(i*1.26)*10); ctx.closePath(); ctx.fill();
+    };
+    star(-55, 10); star(55, 10);
+
+    // 5. القبعة الأسطورية (The Top Hat)
+    ctx.save();
+    ctx.rotate(-0.15 + Math.sin(t)*0.05);
+    ctx.translate(0, -85);
+    ctx.fillStyle = "#581c87";
+    ctx.fillRect(-40, 0, 80, 50); // جسم القبعة
+    ctx.fillStyle = "#fbbf24"; ctx.fillRect(-40, 35, 80, 10); // الشريط
+    ctx.fillStyle = "#581c87"; ctx.beginPath(); ctx.roundRect(-55, 45, 110, 12, 5); ctx.fill(); // القاعدة
+    ctx.restore();
+
     ctx.restore();
     ctx.restore();
 }
 
-function drawBackground() {
-    // خلفية سحرية (Magic Particles)
-    for(let i=0; i<30; i++) {
-        let x = (Math.sin(i*555) * w + frame) % w;
-        let y = (Math.cos(i*555) * h) % h;
-        ctx.fillStyle = "rgba(255, 100, 255, 0.3)";
-        ctx.beginPath(); ctx.arc(x, y, Math.random()*3, 0, Math.PI*2); ctx.fill();
-    }
-}
-
-function render() {
-    // مسح مع أثر خفيف
-    ctx.fillStyle = "rgba(10, 5, 16, 0.2)";
-    ctx.fillRect(0, 0, w, h);
-
-    drawBackground();
+function anim() {
+    ctx.clearRect(0, 0, w, h);
     
-    // إضاءة تتبع الماوس
-    let g = ctx.createRadialGradient(mouse.x, mouse.y, 0, mouse.x, mouse.y, 400);
-    g.addColorStop(0, "rgba(255, 0, 255, 0.1)");
-    g.addColorStop(1, "transparent");
-    ctx.fillStyle = g;
+    // إضاءة خلفية ناعمة
+    let bgGrd = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, w);
+    bgGrd.addColorStop(0, "#1a0b2e"); bgGrd.addColorStop(1, "#050208");
+    ctx.fillStyle = bgGrd;
     ctx.fillRect(0,0,w,h);
 
-    drawCharacter(w/2, h/2 + 50);
-
+    drawFinalCharacter();
     frame++;
-    requestAnimationFrame(render);
+    requestAnimationFrame(anim);
 }
-
-window.onmousemove = e => { mouse.x = e.clientX; mouse.y = e.clientY; };
-render();
+anim();
 </script>
 </body>
 </html>
