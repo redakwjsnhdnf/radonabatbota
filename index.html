@@ -2,27 +2,31 @@
 <html lang="ar">
 <head>
     <meta charset="UTF-8">
-    <title>Void Sentinel: God Mode Edition</title>
+    <title>The Void: Bio-Organic Terror</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #010105; cursor: none; }
-        #game-ui {
-            position: absolute; top: 40px; left: 40px;
-            font-family: 'Orbitron', sans-serif; color: #0ff;
-            text-shadow: 0 0 15px #0ff;
+        body { margin: 0; overflow: hidden; background: #000; cursor: none; }
+        canvas { display: block; filter: contrast(1.2) brightness(0.8) sepia(0.2); }
+        #overlay {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, transparent 20%, rgba(0,0,0,0.9) 100%);
+            pointer-events: none;
         }
+        #grain {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: url('https://upload.wikimedia.org/wikipedia/commons/7/76/1k_Grain_Noise.png');
+            opacity: 0.05; pointer-events: none; animation: noise 0.2s infinite;
+        }
+        @keyframes noise { 0% { transform: translate(0,0); } 100% { transform: translate(10px,10px); } }
     </style>
 </head>
 <body>
 
-<div id="game-ui">
-    <div style="font-size: 32px;">VOID_SENTINEL_MK2</div>
-    <div style="font-size: 14px; color: #f0f;">STATUS: OVERCHARGED</div>
-</div>
-
-<canvas id="canvas"></canvas>
+<div id="overlay"></div>
+<div id="grain"></div>
+<canvas id="render"></canvas>
 
 <script>
-const canvas = document.getElementById('canvas');
+const canvas = document.getElementById('render');
 const ctx = canvas.getContext('2d');
 let w = canvas.width = window.innerWidth;
 let h = canvas.height = window.innerHeight;
@@ -30,161 +34,131 @@ let h = canvas.height = window.innerHeight;
 let frame = 0;
 const keys = {};
 
-const sentinel = {
-    x: w/2, y: h-200, vx: 0, vy: 0,
-    dir: 1, isJumping: false,
-    corePulse: 0,
-    swords: [0, Math.PI/2, Math.PI, Math.PI*1.5] // زوايا السيوف الـ 4
+const ghost = {
+    x: w/2, y: h-150, vx: 0, vy: 0,
+    w: 50, h: 90, dir: 1,
+    isJumping: false,
+    pulse: 0
 };
 
-// --- رسم سيف نيون متطور ---
-function drawNeonBlade(x, y, angle, length, color) {
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(angle);
-    
-    // التوهج (Bloom)
-    ctx.shadowBlur = 20;
-    ctx.shadowColor = color;
-    ctx.strokeStyle = color;
-    ctx.lineWidth = 4;
-    ctx.lineCap = "round";
-    
-    ctx.beginPath();
-    ctx.moveTo(0, 0);
-    ctx.lineTo(length, 0);
-    ctx.stroke();
-    
-    // النصل الداخلي (White Core)
-    ctx.strokeStyle = "#fff";
-    ctx.lineWidth = 1.5;
-    ctx.beginPath();
-    ctx.moveTo(5, 0);
-    ctx.lineTo(length - 5, 0);
-    ctx.stroke();
-    
-    ctx.restore();
+// --- إضاءة واقعية تتبع الماوس والشخصية ---
+let mouse = { x: w/2, y: h/2 };
+window.onmousemove = (e) => { mouse.x = e.clientX; mouse.y = e.clientY; };
+
+function drawCinemaLighting() {
+    // إضاءة كشاف (Flashlight) بأسلوب Resident Evil
+    let flashlight = ctx.createRadialGradient(mouse.x, mouse.y, 10, mouse.x, mouse.y, 500);
+    flashlight.addColorStop(0, 'rgba(255, 250, 220, 0.2)');
+    flashlight.addColorStop(1, 'transparent');
+    ctx.fillStyle = flashlight;
+    ctx.globalCompositeOperation = 'screen';
+    ctx.fillRect(0, 0, w, h);
+    ctx.globalCompositeOperation = 'source-over';
 }
 
-// --- رسم الشخصية الخارقة ---
-function drawSentinel() {
+function drawGhostRealistic() {
     ctx.save();
-    ctx.translate(sentinel.x, sentinel.y);
+    ctx.translate(ghost.x, ghost.y);
     
-    sentinel.corePulse = Math.sin(frame * 0.1) * 5;
-    let jumpStretch = sentinel.vy * 0.15;
-    ctx.scale(sentinel.dir, 1);
-
-    // 1. العباءة الديناميكية (Dynamic Cape)
-    ctx.fillStyle = "#0a0a0f";
+    // أنيميشن القفز والفيزياء
+    let tilt = ghost.vx * 0.05;
+    ctx.rotate(tilt);
+    
+    // 1. العباءة (Textured Cloak)
+    // العباءة دابا فيها طيات (Folds) وظلال واقعية
+    let cloakGrad = ctx.createLinearGradient(-30, 0, 30, 100);
+    cloakGrad.addColorStop(0, "#0a0a0a");
+    cloakGrad.addColorStop(0.5, "#15151a");
+    cloakGrad.addColorStop(1, "#050505");
+    
+    ctx.fillStyle = cloakGrad;
     ctx.beginPath();
-    ctx.moveTo(-30, 0);
+    ctx.moveTo(-28, 0);
+    // رسم حواف ممزقة برمجياً
     for(let i=0; i<=10; i++) {
-        let cx = -30 + i * 6;
-        let cy = 80 + Math.sin(frame*0.15 + i*0.5)*15 + Math.abs(sentinel.vx)*5;
-        ctx.lineTo(cx, cy);
+        let x = -28 + i*5.6;
+        let noise = Math.sin(frame*0.1 + i) * 3;
+        ctx.lineTo(x, 100 + noise + (Math.abs(ghost.vx)*2));
     }
-    ctx.lineTo(30, 0);
+    ctx.lineTo(28, 0);
     ctx.fill();
 
-    // 2. الدروع والجسد (Cyber-Hollow Body)
-    ctx.fillStyle = "#111";
-    ctx.beginPath();
-    ctx.ellipse(0, 20, 20, 35 + jumpStretch, 0, 0, Math.PI*2);
-    ctx.fill();
+    // 2. الماسك (Bone/Porcelain Texture)
+    // الماسك فيه تدرج ضل (Ambient Occlusion)
+    let maskGrd = ctx.createRadialGradient(-10, -25, 0, 0, -20, 40);
+    maskGrd.addColorStop(0, "#e0e0e0");
+    maskGrd.addColorStop(0.8, "#808085");
+    maskGrd.addColorStop(1, "#303035");
     
-    // النواة المضيئة (The Core)
-    ctx.shadowBlur = 15 + sentinel.corePulse;
-    ctx.shadowColor = "#0ff";
-    ctx.fillStyle = "#0ff";
+    ctx.fillStyle = maskGrd;
+    ctx.shadowBlur = 15;
+    ctx.shadowColor = "rgba(0,0,0,0.5)";
     ctx.beginPath();
-    ctx.arc(0, 15, 8 + sentinel.corePulse/2, 0, Math.PI*2);
+    ctx.ellipse(0, -20, 26, 34, 0, 0, Math.PI*2);
     ctx.fill();
 
-    // 3. السيوف الأربعة (Orbital Blades)
-    sentinel.swords.forEach((angle, i) => {
-        let orbitX = Math.cos(angle + frame*0.05) * 60;
-        let orbitY = Math.sin(angle + frame*0.05) * 60 + 20;
-        drawNeonBlade(orbitX, orbitY, angle + frame*0.2, 50, i % 2 === 0 ? "#0ff" : "#f0f");
-    });
-
-    // 4. القناع المتطور (Sentinel Mask)
+    // 3. العيون (Void Abyss)
+    // العين دابا فيها توهج داخلي خافت (Eerie Glow)
     ctx.shadowBlur = 0;
-    ctx.fillStyle = "#eee";
-    ctx.beginPath();
-    // شكل رأس هندسي أكثر هيبة
-    ctx.moveTo(-25, -20);
-    ctx.lineTo(0, -55);
-    ctx.lineTo(25, -20);
-    ctx.lineTo(15, 15);
-    ctx.lineTo(-15, 15);
-    ctx.closePath();
-    ctx.fill();
-
-    // القرون الحادة
-    ctx.beginPath();
-    ctx.moveTo(-15, -40); ctx.lineTo(-35, -80); ctx.lineTo(-5, -50);
-    ctx.moveTo(15, -40); ctx.lineTo(35, -80); ctx.lineTo(5, -50);
-    ctx.fill();
-
-    // العيون النيون (Neon Visor)
     ctx.fillStyle = "#000";
     ctx.beginPath();
-    ctx.ellipse(-10, -25, 6, 12, 0.2, 0, Math.PI*2);
-    ctx.ellipse(10, -25, 6, 12, -0.2, 0, Math.PI*2);
+    ctx.ellipse(-9, -18, 7, 13, 0.1, 0, Math.PI*2);
+    ctx.ellipse(9, -18, 7, 13, -0.1, 0, Math.PI*2);
     ctx.fill();
     
-    ctx.fillStyle = "#0ff";
-    ctx.shadowBlur = 10;
-    ctx.shadowColor = "#0ff";
-    ctx.fillRect(-12, -26, 8, 2);
-    ctx.fillRect(4, -26, 8, 2);
+    // بريق العين "الميت"
+    ctx.fillStyle = "rgba(255,255,255,0.05)";
+    ctx.beginPath(); ctx.arc(-9, -22, 2, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(9, -22, 2, 0, Math.PI*2); ctx.fill();
+
+    // 4. القرون (Cinematic Horns)
+    ctx.fillStyle = "#d0d0d5";
+    ctx.beginPath();
+    ctx.moveTo(-15, -45); ctx.bezierCurveTo(-45, -90, -10, -100, -5, -55);
+    ctx.moveTo(15, -45); ctx.bezierCurveTo(45, -90, 10, -100, 5, -55);
+    ctx.fill();
 
     ctx.restore();
 }
 
-function drawBackground() {
-    // شبكة أرضية نيون (Cyber Grid)
-    ctx.strokeStyle = "rgba(0, 255, 255, 0.1)";
-    ctx.lineWidth = 1;
-    for(let i=0; i<w; i+=100) {
-        ctx.beginPath(); ctx.moveTo(i - (sentinel.x*0.5 % 100), h-150); ctx.lineTo(i - (sentinel.x*0.5 % 100), h); ctx.stroke();
+function drawEnvironment() {
+    // أرضية "رطبة" تعكس الضوء
+    let floorGrad = ctx.createLinearGradient(0, h-100, 0, h);
+    floorGrad.addColorStop(0, "#050508");
+    floorGrad.addColorStop(1, "#000");
+    ctx.fillStyle = floorGrad;
+    ctx.fillRect(0, h-100, w, 100);
+
+    // ضباب (Volumetric Fog)
+    ctx.globalAlpha = 0.2;
+    for(let i=0; i<3; i++) {
+        let x = (frame * (i+1) * 0.5) % w;
+        ctx.fillStyle = "#222530";
+        ctx.fillRect(x, h-150, 400, 100);
+        ctx.fillRect(x - w, h-150, 400, 100);
     }
-    
-    // جزيئات طائرة (Floating Ash)
-    ctx.fillStyle = "rgba(255, 255, 255, 0.2)";
-    for(let i=0; i<30; i++) {
-        let px = (Math.sin(i*99) * w + frame) % w;
-        let py = (Math.cos(i*99) * h) % h;
-        ctx.fillRect(px, py, 2, 2);
-    }
+    ctx.globalAlpha = 1.0;
 }
 
 function loop() {
-    ctx.fillStyle = "#010108";
+    // تأثير "العين السينمائية" (Motion Blur)
+    ctx.fillStyle = "rgba(5, 5, 10, 0.4)";
     ctx.fillRect(0, 0, w, h);
 
-    drawBackground();
-    
-    // إضاءة عامة حول الشخصية
-    let g = ctx.createRadialGradient(sentinel.x, sentinel.y, 0, sentinel.x, sentinel.y, 400);
-    g.addColorStop(0, "rgba(0, 255, 255, 0.05)");
-    g.addColorStop(1, "transparent");
-    ctx.fillStyle = g;
-    ctx.fillRect(0,0,w,h);
-
-    drawSentinel();
+    drawEnvironment();
+    drawGhostRealistic();
+    drawCinemaLighting();
 
     // الفيزياء
-    sentinel.vy += 0.8;
-    sentinel.y += sentinel.vy;
-    sentinel.x += sentinel.vx;
+    ghost.vy += 0.8;
+    ghost.y += ghost.vy;
+    ghost.x += ghost.vx;
 
-    if(sentinel.y > h - 180) { sentinel.y = h - 180; sentinel.vy = 0; sentinel.isJumping = false; }
+    if(ghost.y > h - 150) { ghost.y = h - 150; ghost.vy = 0; ghost.isJumping = false; }
 
-    if(keys.ArrowRight || keys.KeyD) { sentinel.vx = 8; sentinel.dir = 1; }
-    else if(keys.ArrowLeft || keys.KeyA) { sentinel.vx = -8; sentinel.dir = -1; }
-    else { sentinel.vx *= 0.8; }
+    if(keys.ArrowRight || keys.KeyD) { ghost.vx = 5; ghost.dir = 1; }
+    else if(keys.ArrowLeft || keys.KeyA) { ghost.vx = -5; ghost.dir = -1; }
+    else { ghost.vx *= 0.8; }
 
     frame++;
     requestAnimationFrame(loop);
@@ -192,7 +166,7 @@ function loop() {
 
 window.onkeydown = e => {
     keys[e.code] = true;
-    if(e.code === 'Space' && !sentinel.isJumping) { sentinel.vy = -20; sentinel.isJumping = true; }
+    if(e.code === 'Space' && !ghost.isJumping) { ghost.vy = -16; ghost.isJumping = true; }
 };
 window.onkeyup = e => keys[e.code] = false;
 
