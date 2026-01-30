@@ -2,24 +2,23 @@
 <html lang="ar">
 <head>
     <meta charset="UTF-8">
-    <title>Void Singularity: The Infinite Ghost</title>
+    <title>Void Fallen - Studio Edition</title>
     <style>
-        body { margin: 0; overflow: hidden; background: #000; cursor: none; }
-        canvas { display: block; filter: contrast(1.3) brightness(0.9) saturate(1.1); }
+        body { margin: 0; overflow: hidden; background: #020205; cursor: none; }
+        canvas { display: block; filter: contrast(1.1) brightness(0.9) saturate(1.2); }
         #ui {
-            position: absolute; top: 40px; width: 100%; text-align: center;
-            font-family: 'Cinzel', serif; color: #fff; letter-spacing: 8px;
-            text-shadow: 0 0 20px rgba(255,255,255,0.5); pointer-events: none;
+            position: absolute; top: 40px; left: 40px; font-family: 'Cinzel', serif;
+            color: #fff; text-shadow: 0 0 20px #0ff; letter-spacing: 5px; pointer-events: none;
         }
     </style>
 </head>
 <body>
 
-<div id="ui">ABYSS_AWAKENED</div>
-<canvas id="abyss"></canvas>
+<div id="ui">VOID_FALLEN_V.FINAL</div>
+<canvas id="gameCanvas"></canvas>
 
 <script>
-const canvas = document.getElementById('abyss');
+const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 let w = canvas.width = window.innerWidth;
 let h = canvas.height = window.innerHeight;
@@ -27,175 +26,167 @@ let h = canvas.height = window.innerHeight;
 let frame = 0;
 const keys = {};
 
-// --- نظام جزيئات الروح (Soul Particles) ---
-class Particle {
-    constructor(x, y) {
-        this.x = x; this.y = y;
-        this.vx = (Math.random() - 0.5) * 2;
-        this.vy = (Math.random() - 0.5) * 2;
-        this.alpha = 1;
-    }
-    update() { this.x += this.vx; this.y += this.vy; this.alpha -= 0.01; }
-}
-let soulParticles = [];
+// --- نظام الكاميرا الاحترافي ---
+const cam = { x: 0, y: 0, targetX: 0, targetY: 0, shake: 0 };
 
-// --- الكائن الخارق (The Absolute Ghost) ---
+// --- جزيئات الغبار والروح ---
+let particles = [];
+class Particle {
+    constructor(x, y, color) {
+        this.x = x; this.y = y;
+        this.vx = (Math.random()-0.5)*4;
+        this.vy = (Math.random()-0.5)*4;
+        this.life = 1; this.color = color;
+    }
+    draw() {
+        ctx.globalAlpha = this.life;
+        ctx.fillStyle = this.color;
+        ctx.beginPath(); ctx.arc(this.x - cam.x, this.y - cam.y, 2, 0, Math.PI*2); ctx.fill();
+        this.x += this.vx; this.y += this.vy; this.life -= 0.02;
+    }
+}
+
+// --- الشخصية (The God Ghost) ---
 const ghost = {
-    x: w/2, y: h-150, vx: 0, vy: 0,
-    targetX: w/2, targetY: h-150,
-    points: Array.from({length: 25}, () => ({x: 0, y: 0, oldX: 0, oldY: 0})),
-    nail: { x: 0, y: 0, angle: 0 }
+    x: w/2, y: h-500, vx: 0, vy: 0,
+    w: 60, h: 90, dir: 1, 
+    isJumping: false,
+    points: Array.from({length: 15}, () => ({x: 0, y: 0})), // العباءة
+    landAnim: 0
 };
 
-// --- نظام الفيزياء الهيكلية (Verlet) ---
-function updatePhysics() {
-    let headX = ghost.x;
-    let headY = ghost.y;
-    
-    ghost.points[0].x = headX;
-    ghost.points[0].y = headY;
+function updateGhostPhysics() {
+    // الحركة والجاذبية
+    ghost.vy += 0.8;
+    if(keys.KeyD || keys.ArrowRight) { ghost.vx = 7; ghost.dir = 1; }
+    else if(keys.KeyA || keys.ArrowLeft) { ghost.vx = -7; ghost.dir = -1; }
+    else ghost.vx *= 0.8;
 
-    for (let i = 1; i < ghost.points.length; i++) {
+    ghost.x += ghost.vx;
+    ghost.y += ghost.vy;
+
+    // الاصطدام بالأرض مع اهتزاز الكاميرا
+    if(ghost.y > h - 150) {
+        if(ghost.vy > 5) { cam.shake = 10; ghost.landAnim = 10; }
+        ghost.y = h - 150;
+        ghost.vy = 0;
+        ghost.isJumping = false;
+    }
+
+    // تحديث العباءة (Verlet)
+    ghost.points[0] = {x: ghost.x, y: ghost.y};
+    for(let i=1; i<ghost.points.length; i++) {
         let p = ghost.points[i];
         let prev = ghost.points[i-1];
-        
-        let dx = p.x - prev.x;
-        let dy = p.y - prev.y;
-        let distance = Math.sqrt(dx * dx + dy * dy);
-        let angle = Math.atan2(dy, dx);
-        
-        let targetDist = 6; // تباعد فقرات العباءة
-        if (distance > targetDist) {
-            p.x = prev.x + Math.cos(angle) * targetDist;
-            p.y = prev.y + Math.sin(angle) * targetDist;
-        }
-        // إضافة جاذبية وريح للعباءة
-        p.y += 0.5;
-        p.x += Math.sin(frame * 0.05 + i * 0.2) * 1.5;
+        let angle = Math.atan2(p.y - prev.y, p.x - prev.x);
+        p.x = prev.x + Math.cos(angle) * 8;
+        p.y = prev.y + Math.sin(angle) * 8 + 1; // الجاذبية للعباءة
     }
 }
 
-function drawAbsoluteGhost() {
+function drawGhost() {
     ctx.save();
-    
-    // 1. العباءة الشبحية (Void Fabric)
+    ctx.translate(-cam.x, -cam.y);
+
+    // 1. العباءة السينمائية
     ctx.beginPath();
-    ctx.shadowBlur = 30;
-    ctx.shadowColor = "rgba(40, 0, 100, 0.5)";
-    ctx.fillStyle = "rgba(5, 5, 10, 0.95)";
-    
-    // رسم العباءة كأنها سائل
-    ctx.moveTo(ghost.points[0].x - 25, ghost.points[0].y);
-    for (let i = 0; i < ghost.points.length; i++) {
+    ctx.fillStyle = "#050508";
+    ctx.shadowBlur = 15; ctx.shadowColor = "#000";
+    ctx.moveTo(ghost.points[0].x - 20 * ghost.dir, ghost.points[0].y);
+    ghost.points.forEach((p, i) => {
+        let offset = Math.sin(frame*0.1 + i*0.5) * 10;
+        ctx.lineTo(p.x - 20*ghost.dir + offset, p.y + i*5);
+    });
+    for(let i=ghost.points.length-1; i>=0; i--) {
         let p = ghost.points[i];
-        let offset = Math.sin(i * 0.2) * 15 * (i/25);
-        ctx.lineTo(p.x - 25 + offset, p.y + i*2);
+        let offset = Math.sin(frame*0.1 + i*0.5) * 10;
+        ctx.lineTo(p.x + 20*ghost.dir - offset, p.y + i*5);
     }
-    for (let i = ghost.points.length - 1; i >= 0; i--) {
-        let p = ghost.points[i];
-        let offset = Math.sin(i * 0.2) * 15 * (i/25);
-        ctx.lineTo(p.x + 25 - offset, p.y + i*2);
-    }
-    ctx.closePath();
-    ctx.fill();
-
-    // 2. القناع الإلهي (The God-Mask)
-    let floatY = Math.sin(frame * 0.08) * 4;
-    ctx.translate(ghost.x, ghost.y + floatY);
-    
-    // تدرج لوني عميق (Subsurface Scattering)
-    let maskGrad = ctx.createRadialGradient(-10, -30, 0, 0, -20, 60);
-    maskGrad.addColorStop(0, "#ffffff");
-    maskGrad.addColorStop(0.4, "#d1d1d6");
-    maskGrad.addColorStop(1, "#1a1a20");
-    
-    ctx.fillStyle = maskGrad;
-    ctx.beginPath();
-    // تصميم الرأس بـ 8 منحنيات للحصول على دقة فائقة
-    ctx.moveTo(0, -60);
-    ctx.bezierCurveTo(40, -60, 35, 20, 0, 25);
-    ctx.bezierCurveTo(-35, 20, -40, -60, 0, -60);
-    ctx.fill();
-
-    // 3. العيون اللانهائية (Eyes of the Void)
-    ctx.shadowBlur = 0;
-    ctx.fillStyle = "#000";
-    // العين اليمنى مع توهج داخلي
-    ctx.beginPath(); ctx.ellipse(12, -15, 8, 16, 0.15, 0, Math.PI*2); ctx.fill();
-    // العين اليسرى
-    ctx.beginPath(); ctx.ellipse(-12, -15, 8, 16, -0.15, 0, Math.PI*2); ctx.fill();
-    
-    // إشعاع الروح من العيون
-    if (Math.random() > 0.8) {
-        soulParticles.push(new Particle(ghost.x + (Math.random()-0.5)*20, ghost.y - 15));
-    }
-
-    // 4. السيف الملكي (The Pure Nail)
-    ctx.restore();
-    let nailAngle = Math.sin(frame * 0.05) * 0.2 + (ghost.vx * 0.1);
-    drawNail(ghost.x + 40 * (ghost.vx >= 0 ? 1 : -1), ghost.y + 20, nailAngle);
-}
-
-function drawNail(x, y, ang) {
-    ctx.save();
-    ctx.translate(x, y);
-    ctx.rotate(ang);
-    let nGrd = ctx.createLinearGradient(0, 0, 80, 0);
-    nGrd.addColorStop(0, "#333"); nGrd.addColorStop(0.5, "#fff"); nGrd.addColorStop(1, "#333");
-    ctx.fillStyle = nGrd;
-    ctx.shadowBlur = 20; ctx.shadowColor = "rgba(255,255,255,0.5)";
-    ctx.beginPath();
-    ctx.moveTo(0, 0); ctx.lineTo(70, -12); ctx.lineTo(85, 0); ctx.lineTo(70, 12);
     ctx.closePath(); ctx.fill();
+
+    // 2. الرأس (Studio Detail)
+    let floatY = Math.sin(frame*0.1)*5 - (ghost.landAnim * 2);
+    ctx.translate(ghost.x, ghost.y + floatY);
+    ctx.scale(ghost.dir, 1);
+
+    // ماسك بتدرج احترافي
+    let g = ctx.createRadialGradient(-5, -30, 0, 0, -25, 50);
+    g.addColorStop(0, "#fff"); g.addColorStop(1, "#778");
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.ellipse(0, -25, 28, 35, 0, 0, Math.PI*2); ctx.fill();
+
+    // القرون
+    ctx.beginPath();
+    ctx.moveTo(-15, -45); ctx.bezierCurveTo(-45, -90, -10, -100, -5, -55);
+    ctx.moveTo(15, -45); ctx.bezierCurveTo(45, -90, 10, -100, 5, -55);
+    ctx.fill();
+
+    // العيون (The Void Glow)
+    ctx.fillStyle = "#000";
+    ctx.beginPath(); ctx.ellipse(-10, -20, 7, 12, 0.1, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(10, -20, 7, 12, -0.1, 0, Math.PI*2); ctx.fill();
+    
+    // توهج أزرق خافت داخل العين
+    ctx.shadowBlur = 10; ctx.shadowColor = "#0ff";
+    ctx.fillStyle = "rgba(0, 255, 255, 0.3)";
+    ctx.beginPath(); ctx.arc(-10, -22, 2, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(10, -22, 2, 0, Math.PI*2); ctx.fill();
+
     ctx.restore();
 }
 
 function drawAtmosphere() {
-    // ضباب حجمي (Volumetric Fog)
-    let fog = ctx.createLinearGradient(0, h-300, 0, h);
-    fog.addColorStop(0, "transparent");
-    fog.addColorStop(1, "rgba(20, 20, 40, 0.6)");
-    ctx.fillStyle = fog;
-    ctx.fillRect(0, 0, w, h);
-
-    // ذرات الروح الطائرة
-    soulParticles.forEach((p, i) => {
-        p.update();
-        ctx.globalAlpha = p.alpha;
-        ctx.fillStyle = "#fff";
-        ctx.beginPath(); ctx.arc(p.x, p.y, 1.5, 0, Math.PI*2); ctx.fill();
-        if (p.alpha <= 0) soulParticles.splice(i, 1);
-    });
-    ctx.globalAlpha = 1;
+    // Parallax الخلفية
+    ctx.fillStyle = "rgba(255,255,255,0.05)";
+    for(let i=0; i<50; i++) {
+        let px = (i * 250 - cam.x * 0.2 + w) % w;
+        let py = (i * 150 - cam.y * 0.2 + h) % h;
+        ctx.fillRect(px, py, 2, 2);
+    }
 }
 
 function loop() {
-    // مسح ذكي (Temporal Super Sampling)
-    ctx.fillStyle = "rgba(0, 0, 2, 0.15)";
+    // تنظيف مع Motion Blur
+    ctx.fillStyle = "rgba(2, 2, 5, 0.3)";
     ctx.fillRect(0, 0, w, h);
 
-    updatePhysics();
+    // تحديث الكاميرا بسلاسة
+    cam.targetX = ghost.x - w/2;
+    cam.targetY = ghost.y - h/1.5;
+    cam.x += (cam.targetX - cam.x) * 0.1;
+    cam.y += (cam.targetY - cam.y) * 0.1;
+    if(cam.shake > 0) {
+        cam.x += (Math.random()-0.5)*cam.shake;
+        cam.y += (Math.random()-0.5)*cam.shake;
+        cam.shake *= 0.9;
+    }
+
     drawAtmosphere();
-    drawAbsoluteGhost();
+    updateGhostPhysics();
+    drawGhost();
 
-    // فيزياء التحكم
-    if(keys.ArrowRight || keys.KeyD) ghost.vx = Math.min(ghost.vx + 1, 9);
-    else if(keys.ArrowLeft || keys.KeyA) ghost.vx = Math.max(ghost.vx - 1, -9);
-    else ghost.vx *= 0.85;
+    // جزيئات
+    if(Math.abs(ghost.vx) > 1 && !ghost.isJumping) {
+        particles.push(new Particle(ghost.x, ghost.y + 10, "#444"));
+    }
+    particles.forEach((p, i) => {
+        p.draw();
+        if(p.life <= 0) particles.splice(i, 1);
+    });
 
-    ghost.vy += 0.8;
-    ghost.x += ghost.vx;
-    ghost.y += ghost.vy;
-
-    if(ghost.y > h - 180) { ghost.y = h - 180; ghost.vy = 0; }
-    
+    if(ghost.landAnim > 0) ghost.landAnim--;
     frame++;
     requestAnimationFrame(loop);
 }
 
-window.onkeydown = e => { 
-    keys[e.code] = true; 
-    if(e.code === 'Space' && ghost.y >= h - 181) ghost.vy = -22; 
+window.onkeydown = e => {
+    keys[e.code] = true;
+    if(e.code === 'Space' && !ghost.isJumping) {
+        ghost.vy = -18;
+        ghost.isJumping = true;
+        cam.shake = 5;
+    }
 };
 window.onkeyup = e => keys[e.code] = false;
 
