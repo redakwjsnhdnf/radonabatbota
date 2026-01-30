@@ -3,58 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>G-IDENTITY | برو-بورنر</title>
+    <title>Spotify Premium Generator | تفعيل سبوتيفاي</title>
     <style>
-        body { background: #050505; color: #00ff41; font-family: 'Courier New', monospace; text-align: center; padding: 20px; }
-        .vault-card { border: 2px solid #00ff41; background: #000; padding: 25px; display: inline-block; border-radius: 5px; box-shadow: 0 0 20px #00ff41; max-width: 400px; width: 90%; }
-        #pfp { width: 120px; height: 120px; border: 2px solid #00ff41; margin-bottom: 15px; filter: grayscale(100%); }
-        .data-line { text-align: left; margin: 10px 0; border-bottom: 1px solid #111; padding-bottom: 5px; font-size: 0.9em; }
-        .label { color: #888; font-size: 0.8em; }
-        .cc-box { background: #111; color: #ffcc00; padding: 10px; margin-top: 15px; border: 1px dashed #ffcc00; }
-        button { background: #00ff41; color: #000; border: none; padding: 12px; width: 100%; font-weight: bold; cursor: pointer; margin-top: 15px; }
-        .premium { color: #ff3366; margin-top: 20px; font-size: 0.8em; cursor: pointer; animation: blink 1s infinite; }
-        @keyframes blink { 50% { opacity: 0; } }
+        body { background: #121212; color: #1DB954; font-family: 'Segoe UI', sans-serif; text-align: center; padding: 20px; }
+        .spotify-card { background: #000; border: 1px solid #1DB954; border-radius: 15px; padding: 30px; display: inline-block; max-width: 450px; width: 100%; box-shadow: 0 0 25px rgba(29, 185, 84, 0.3); }
+        h1 { color: #fff; margin-bottom: 5px; }
+        .bin-info { color: #888; font-size: 0.8em; margin-bottom: 20px; }
+        .card-output { background: #181818; padding: 15px; border-radius: 10px; margin: 15px 0; border: 1px dashed #1DB954; font-family: monospace; font-size: 1.2em; color: #fff; }
+        button { background: #1DB954; color: #fff; border: none; padding: 15px 30px; border-radius: 30px; font-weight: bold; cursor: pointer; width: 100%; font-size: 1.1em; }
+        button:hover { transform: scale(1.02); background: #1ed760; }
+        .notice { margin-top: 20px; font-size: 0.8em; color: #ef5350; }
+        .buy-premium { margin-top: 25px; padding-top: 15px; border-top: 1px solid #333; }
+        .buy-premium a { color: #fff; text-decoration: none; font-weight: bold; border: 1px solid #fff; padding: 5px 10px; border-radius: 5px; }
     </style>
 </head>
 <body>
-    <h1>[ IDENTITY-X GENERATOR ]</h1>
-    <p style="font-size: 0.7em;">نظام توليد الهويات المشفرة للعمليات الرقمية</p>
 
-    <div class="vault-card">
-        <img id="pfp" src="https://i.pravatar.cc/150?u=init" alt="identity">
-        <div class="data-line"><span class="label">FULL NAME:</span> <span id="name">GENERATING...</span></div>
-        <div class="data-line"><span class="label">EMAIL:</span> <span id="email">....</span></div>
-        <div class="data-line"><span class="label">LOCATION:</span> <span id="city">....</span></div>
+    <div class="spotify-card">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/1/19/Spotify_logo_without_text.svg" width="50" alt="Spotify">
+        <h1>Spotify Card Gen</h1>
+        <p class="bin-info">BIN: 539121 (USA/Global) - يعمل حالياً</p>
+
+        <div class="card-output" id="cardDisplay">
+            5391 21XX XXXX 8842
+        </div>
         
-        <div class="cc-box">
-            <div style="font-size: 0.7em; color: #888;">FAKE VIRTUAL CARD (FOR TESTING)</div>
-            <span id="cc">4125 XXXX XXXX 4582</span> | EXP: 12/28
+        <div id="extraInfo" style="color: #888; font-family: monospace; margin-bottom: 15px;">
+            EXP: 12/27 | CVV: 541
         </div>
 
-        <button onclick="generate()">توليد هوية جديدة</button>
-        
-        <div class="premium" onclick="window.location.href='https://wa.me/2126XXXXXXXX'">
-            [ تفعيل الهوية برقم هاتف حقيقي لاستقبال SMS - 5 دراهم ]
+        <button onclick="generateSpotifyCard()">توليد بطاقة جديدة</button>
+
+        <p class="notice">★ هذه البطاقات تستخدم لتجاوز صفحة الدفع في الفترة التجريبية فقط.</p>
+
+        <div class="buy-premium">
+            <p style="color: #fff;">واش بغيتي حساب تفعيل حقيقي 100%؟</p>
+            <a href="https://wa.me/212600000000">اشتري حساب 3 أشهر بـ 15 درهم فقط</a>
         </div>
     </div>
 
     <script>
-        async function generate() {
-            const res = await fetch('https://randomuser.me/api/');
-            const d = await res.json();
-            const u = d.results[0];
+        function generateSpotifyCard() {
+            // BIN مخصص لسبوتيفاي (كمثال)
+            let bin = "539121";
+            let part1 = Math.floor(10 + Math.random() * 89);
+            let part2 = Math.floor(1000 + Math.random() * 8999);
+            let part3 = Math.floor(1000 + Math.random() * 8999);
             
-            document.getElementById('name').innerText = u.name.first.toUpperCase() + " " + u.name.last.toUpperCase();
-            document.getElementById('email').innerText = u.email;
-            document.getElementById('city').innerText = u.location.city + ", " + u.location.country;
-            document.getElementById('pfp').src = u.picture.large;
-            
-            // توليد رقم بطاقة وهمي
-            let cc = "4125 " + Math.floor(1000 + Math.random() * 9000) + " " + Math.floor(1000 + Math.random() * 9000) + " " + Math.floor(1000 + Math.random() * 9000);
-            document.getElementById('cc').innerText = cc;
+            let fullCard = `${bin}${part1}${part2}${part3}`;
+            let cvv = Math.floor(100 + Math.random() * 899);
+            let month = Math.floor(1 + Math.random() * 12).toString().padStart(2, '0');
+            let year = 2026 + Math.floor(Math.random() * 4);
+
+            document.getElementById('cardDisplay').innerText = fullCard.match(/.{1,4}/g).join(' ');
+            document.getElementById('extraInfo').innerText = `EXP: ${month}/${year} | CVV: ${cvv}`;
         }
-        // توليد أول هوية تلقائياً
-        window.onload = generate;
     </script>
 </body>
 </html>
