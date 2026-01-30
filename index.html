@@ -2,64 +2,59 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>Spotify Premium 100% Working | تفعيل مضمون</title>
+    <title>Bulk Spotify Gen | مولد الكميات</title>
     <style>
-        body { background: #121212; color: #1DB954; font-family: sans-serif; text-align: center; padding: 20px; }
-        .box { background: #000; border: 2px solid #1DB954; border-radius: 20px; padding: 30px; display: inline-block; width: 90%; max-width: 500px; box-shadow: 0 0 30px #1DB954; }
-        .card-box { background: #181818; padding: 20px; border-radius: 10px; margin: 20px 0; border: 1px dashed #fff; color: #fff; font-family: monospace; font-size: 1.3em; }
-        .info { font-size: 0.9em; color: #888; margin-bottom: 20px; text-align: right; }
-        button { background: #1DB954; color: #000; border: none; padding: 15px; border-radius: 30px; font-weight: bold; width: 100%; cursor: pointer; font-size: 1.1em; }
-        .badge { background: #ff3366; color: #fff; padding: 5px 10px; border-radius: 5px; font-size: 0.8em; }
+        body { background: #0c0c0c; color: #1DB954; font-family: monospace; text-align: center; padding: 20px; }
+        .main { background: #000; border: 2px solid #1DB954; border-radius: 15px; padding: 20px; display: inline-block; width: 95%; max-width: 600px; box-shadow: 0 0 20px #1DB954; }
+        textarea { width: 100%; height: 250px; background: #111; color: #00ff41; border: 1px solid #333; padding: 10px; font-family: monospace; margin-top: 15px; border-radius: 5px; text-align: left; }
+        input, select { background: #111; border: 1px solid #1DB954; color: #fff; padding: 10px; border-radius: 5px; margin: 5px; }
+        button { background: #1DB954; color: #000; border: none; padding: 12px 25px; border-radius: 5px; font-weight: bold; cursor: pointer; width: 100%; margin-top: 10px; }
+        button:hover { background: #fff; }
     </style>
 </head>
 <body>
 
-    <div class="box">
-        <h1>SPOTIFY PREMIUM GEN 🚀</h1>
-        <p>توليد بطاقات تتخطى حماية Spotify (تحديث اليوم)</p>
-
-        <div class="card-box" id="output">
-            اضغط على الزر للتوليد
+    <div class="main">
+        <h2>[ SPOTIFY BULK GENERATOR ]</h2>
+        
+        <div>
+            <input type="text" id="bin" placeholder="ادخل الـ BIN هنا" value="489504">
+            <input type="number" id="limit" placeholder="العدد" value="50" style="width: 60px;">
         </div>
 
-        <div class="info" id="details">
-            <b>الدولة:</b> -- | <b>الرمز البريدي:</b> --
-        </div>
+        <button onclick="generateBulk()">توليد البطاقات بالجملة 🚀</button>
 
-        <button onclick="generateFresh()">توليد بطاقة شغالة الآن</button>
-
-        <div style="margin-top: 25px; border-top: 1px solid #333; padding-top: 15px;">
-            <p style="color: #fff; font-size: 0.9em;">إيلا ما عرفتيش تخدم بالـ BIN، حنا نفعلوه ليك بـ 15 درهم:</p>
-            <a href="https://wa.me/2126XXXXXXXX" style="color: #1DB954; text-decoration: none; font-weight: bold;">📩 تواصل معنا عبر واتساب</a>
-        </div>
+        <textarea id="output" readonly placeholder="النتائج ستظهر هنا..."></textarea>
+        
+        <p style="font-size: 0.8em; color: #888; margin-top: 10px;">
+            هز هاد النتائج وحطهم فـ شي <b>CC Checker</b> باش تلقى الـ LIVE.
+        </p>
     </div>
 
     <script>
-        // BINs هادو هوما اللي خدامين دابا في 2026
-        const activeBins = [
-            {bin: "489504", country: "USA", zip: "10001", type: "Visa"},
-            {bin: "553292", country: "USA", zip: "90001", type: "MasterCard"},
-            {bin: "450875", country: "UK", zip: "SW1A 1AA", type: "Visa"},
-            {bin: "549173", country: "Brazil", zip: "01001-000", type: "MasterCard"}
-        ];
+        function generateBulk() {
+            const bin = document.getElementById('bin').value;
+            const limit = document.getElementById('limit').value;
+            let results = "";
 
-        function generateFresh() {
-            // اختيار BIN عشوائي من القائمة الشغالة
-            const selected = activeBins[Math.floor(Math.random() * activeBins.length)];
-            
-            // توليد أرقام عشوائية متطابقة مع خوارزمية البطاقات
-            let cardNumber = selected.bin;
-            for(let i=0; i<10; i++) {
-                cardNumber += Math.floor(Math.random() * 10);
+            if(bin.length < 6) { alert("الـ BIN خاصو يكون فيه 6 أرقام على الأقل"); return; }
+
+            for(let i=0; i < limit; i++) {
+                let card = bin;
+                // توليد باقي الأرقام (تكملة لـ 16 رقم)
+                while(card.length < 16) {
+                    card += Math.floor(Math.random() * 10);
+                }
+                
+                let month = Math.floor(Math.random() * 12 + 1).toString().padStart(2, '0');
+                let year = 2026 + Math.floor(Math.random() * 5);
+                let cvv = Math.floor(Math.random() * 899 + 100);
+
+                // التنسيق اللي كيقبلوه أغلب الـ Checkers: Number|Month|Year|CVV
+                results += `${card}|${month}|${year}|${cvv}\n`;
             }
-            
-            // التنسيق
-            const formatted = cardNumber.match(/.{1,4}/g).join(' ');
-            const exp = `0${Math.floor(Math.random()*9+1)}/20${Math.floor(Math.random()*4+7)}`;
-            const cvv = Math.floor(Math.random()*899+100);
 
-            document.getElementById('output').innerHTML = `<span class="badge">LIVE</span> <br><br> ${formatted}<br><span style="font-size: 0.7em; color: #1DB954;">EXP: ${exp} | CVV: ${cvv}</span>`;
-            document.getElementById('details').innerHTML = `<b>النوع:</b> ${selected.type} | <b>الدولة:</b> ${selected.country} | <b>الرمز:</b> ${selected.zip}`;
+            document.getElementById('output').value = results;
         }
     </script>
 </body>
