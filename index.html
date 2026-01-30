@@ -1,78 +1,111 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>THE SILENCE</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radona Batbota | Secret Vault</title>
     <style>
-        body { margin: 0; background: #000; overflow: hidden; display: flex; align-items: center; justify-content: center; height: 100vh; cursor: none; }
-        #core {
-            width: 10px; height: 10px; background: #ffb7c5; border-radius: 50%;
-            box-shadow: 0 0 50px #ffb7c5; transition: 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-        #message {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            color: #ffb7c5; font-family: 'serif'; letter-spacing: 20px;
-            opacity: 0; transition: 2s; pointer-events: none; text-align: center;
-        }
-        #cursor {
-            position: fixed; width: 2px; height: 20px; background: #ffb7c5; pointer-events: none;
-        }
+        body { background: #000; color: #0f0; font-family: 'Courier New', monospace; padding: 20px; text-align: center; }
+        .box { border: 2px solid #0f0; padding: 20px; border-radius: 10px; max-width: 600px; margin: 20px auto; box-shadow: 0 0 15px #0f0; }
+        textarea { width: 90%; height: 80px; background: #111; color: #0f0; border: 1px solid #0f0; padding: 10px; margin: 10px 0; }
+        button { background: #0f0; color: #000; border: none; padding: 10px 20px; cursor: pointer; font-weight: bold; width: 100%; transition: 0.3s; }
+        button:hover { background: #fff; box-shadow: 0 0 20px #fff; }
+        canvas { display: none; }
+        #outputImg { max-width: 100%; margin-top: 20px; border: 1px solid #fff; display: none; }
+        .tab { display: flex; justify-content: space-around; margin-bottom: 20px; }
+        .tab-btn { background: none; color: #0f0; border: 1px solid #0f0; width: 45%; }
+        .active { background: #0f0; color: #000; }
     </style>
 </head>
 <body>
-    <div id="cursor"></div>
-    <div id="core"></div>
-    <div id="message">الصمت هو لغة الخلود</div>
+
+    <h1>[ RADONA-STEGANO-V1 ]</h1>
+
+    <div class="box">
+        <div class="tab">
+            <button class="tab-btn active" onclick="showTab('encode')">تشفير (إخفاء)</button>
+            <button class="tab-btn" onclick="showTab('decode')">فك التشفير (إظهار)</button>
+        </div>
+
+        <div id="encodeSection">
+            <input type="file" id="upload" accept="image/*"><br>
+            <textarea id="message" placeholder="اكتب السر هنا..."></textarea><br>
+            <button onclick="encode()">توليد الصورة المشفرة</button>
+            <img id="outputImg">
+        </div>
+
+        <div id="decodeSection" style="display:none;">
+            <p>ارفع الصورة التي استلمتها لرؤية السر:</p>
+            <input type="file" id="uploadDecode" accept="image/*"><br><br>
+            <button onclick="decode()">كشف السر المحتجب</button>
+            <div id="decodedMessage" style="margin-top:20px; font-size: 1.5em; color: yellow;"></div>
+        </div>
+    </div>
+
+    <canvas id="canvas"></canvas>
 
     <script>
-        const core = document.getElementById('core');
-        const msg = document.getElementById('message');
-        const cursor = document.getElementById('cursor');
+        function showTab(type) {
+            document.getElementById('encodeSection').style.display = type === 'encode' ? 'block' : 'none';
+            document.getElementById('decodeSection').style.display = type === 'decode' ? 'block' : 'none';
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active'));
+        }
 
-        document.addEventListener('mousemove', (e) => {
-            cursor.style.left = e.clientX + 'px';
-            cursor.style.top = e.clientY - 10 + 'px';
-        });
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
 
-        // طلب الوصول للميكروفون لتحليل مستوى الصوت
-        navigator.mediaDevices.getUserMedia({ audio: true })
-        .then(stream => {
-            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-            const analyser = audioContext.createAnalyser();
-            const microphone = audioContext.createMediaStreamSource(stream);
-            const javascriptNode = audioContext.createScriptProcessor(2048, 1, 1);
+        function encode() {
+            const file = document.getElementById('upload').files[0];
+            const msg = document.getElementById('message').value;
+            if(!file || !msg) return alert("أدخل الصورة والرسالة أولاً!");
 
-            analyser.smoothingTimeConstant = 0.8;
-            analyser.fftSize = 1024;
-            microphone.connect(analyser);
-            analyser.connect(javascriptNode);
-            javascriptNode.connect(audioContext.destination);
-
-            javascriptNode.onaudioprocess = () => {
-                const array = new Uint8Array(analyser.frequencyBinCount);
-                analyser.getByteFrequencyData(array);
-                let values = 0;
-                for (let i = 0; i < array.length; i++) values += array[i];
-                const average = values / array.length;
-
-                // إذا كان الجو هادئاً، يكبر القلب وتظهر الرسالة
-                if (average < 10) { 
-                    core.style.transform = 'scale(20)';
-                    msg.style.opacity = '0.5';
-                    core.style.boxShadow = '0 0 100px #ffb7c5';
-                } else {
-                    // إذا كان هناك ضجيج، ينكمش الموقع ويختفي
-                    core.style.transform = `scale(${Math.max(1, 10 - average/5)})`;
-                    msg.style.opacity = '0';
-                    core.style.boxShadow = 'none';
-                }
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    canvas.width = img.width; canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const binaryMsg = Array.from(new TextEncoder().encode(msg + "##END##")).map(b => b.toString(2).padStart(8, '0')).join('');
+                    
+                    for (let i = 0; i < binaryMsg.length; i++) {
+                        imgData.data[i * 4] = (imgData.data[i * 4] & 0xFE) | parseInt(binaryMsg[i]);
+                    }
+                    ctx.putImageData(imgData, 0, 0);
+                    const out = document.getElementById('outputImg');
+                    out.src = canvas.toDataURL();
+                    out.style.display = "block";
+                    alert("تم التشفير! اضغط مطولاً على الصورة لحفظها.");
+                };
+                img.src = e.target.result;
             };
-        })
-        .catch(err => {
-            console.log("الموقع يحتاج للصمت ليظهر.");
-            msg.innerHTML = "أعط الصلاحية للميكروفون لتجربة الصمت";
-            msg.style.opacity = "1";
-        });
+            reader.readAsDataURL(file);
+        }
+
+        function decode() {
+            const file = document.getElementById('uploadDecode').files[0];
+            if(!file) return alert("ارفع الصورة أولاً!");
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    canvas.width = img.width; canvas.height = img.height;
+                    ctx.drawImage(img, 0, 0);
+                    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    let binary = "";
+                    for (let i = 0; i < imgData.data.length / 4; i++) {
+                        binary += (imgData.data[i * 4] & 1).toString();
+                    }
+                    const bytes = binary.match(/.{1,8}/g).map(b => parseInt(b, 2));
+                    const decoded = new TextDecoder().decode(new Uint8Array(bytes));
+                    const result = decoded.split("##END##")[0];
+                    document.getElementById('decodedMessage').innerText = "الرسالة السرية: " + result;
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
     </script>
 </body>
 </html>
