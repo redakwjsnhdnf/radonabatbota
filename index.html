@@ -2,22 +2,24 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>Radona Chatbot - Free</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radona Bot - Free</title>
     <style>
-        body { margin: 0; font-family: sans-serif; background: #000; color: white; display: flex; flex-direction: column; height: 100vh; }
-        iframe { flex: 1; border: none; width: 100%; height: 100%; }
-        .header { background: #1a1a1a; padding: 15px; text-align: center; font-weight: bold; border-bottom: 2px solid #333; }
+        body { margin: 0; padding: 0; background: #0f172a; font-family: sans-serif; display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .container { width: 90%; max-width: 500px; height: 600px; background: #1e293b; border-radius: 20px; box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1); overflow: hidden; border: 1px solid #334155; }
+        .header { background: #334155; color: white; padding: 15px; text-align: center; font-weight: bold; }
+        iframe { width: 100%; height: calc(100% - 50px); border: none; }
     </style>
 </head>
 <body>
 
-<div class="header">Radona AI Chatbot (Free Mode)</div>
-
-<iframe 
-    src="https://duckduckgo.com/aichat" 
-    allow="clipboard-write"
-    title="AI Chat">
-</iframe>
+<div class="container">
+    <div class="header">Radona AI Chatbot (Free)</div>
+    <iframe
+        src="https://www.blackbox.ai/agent/RadonaBot_Free"
+        allow="clipboard-write; microphone; camera"
+    ></iframe>
+</div>
 
 </body>
 </html>
