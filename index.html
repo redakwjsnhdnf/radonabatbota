@@ -2,125 +2,184 @@
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>Radona AI | النسخة الخفيفة</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Radona AI | Premium</title>
     <style>
-        /* CSS - التصميم */
+        :root {
+            --bg: #050505;
+            --sidebar: #121212;
+            --accent: #bb86fc;
+            --text: #e0e0e0;
+            --glass: rgba(255, 255, 255, 0.05);
+        }
+
+        * { box-sizing: border-box; transition: all 0.3s ease; }
+
         body {
-            background: #0b0e14;
-            color: #e6edf3;
-            font-family: 'Arial', sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'Inter', -apple-system, sans-serif;
             margin: 0;
             display: flex;
-            flex-direction: column;
             height: 100vh;
         }
 
-        header {
-            background: #161b22;
+        /* Side Menu */
+        .sidebar {
+            width: 260px;
+            background: var(--sidebar);
             padding: 15px;
-            text-align: center;
-            border-bottom: 2px solid #7d5fff;
-            font-size: 24px;
-            font-weight: bold;
-            color: #7d5fff;
-        }
-
-        #chat-box {
-            flex: 1;
-            overflow-y: auto;
-            padding: 20px;
             display: flex;
             flex-direction: column;
-            gap: 15px;
+            border-left: 1px solid #222;
         }
+
+        .new-chat {
+            border: 1px solid #444;
+            padding: 10px;
+            border-radius: 8px;
+            text-align: center;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+
+        .new-chat:hover { background: #222; }
+
+        /* Main Chat Area */
+        .main-content {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+        }
+
+        #chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 50px 15% 100px;
+            display: flex;
+            flex-direction: column;
+            gap: 25px;
+        }
+
+        .msg-wrapper {
+            display: flex;
+            flex-direction: column;
+            max-width: 85%;
+        }
+
+        .user-wrapper { align-self: flex-start; }
+        .ai-wrapper { align-self: flex-end; width: 100%; }
 
         .bubble {
-            max-width: 70%;
-            padding: 12px;
+            padding: 16px 20px;
+            border-radius: 18px;
+            line-height: 1.6;
+            font-size: 16px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+
+        .user-bubble {
+            background: var(--accent);
+            color: #000;
+            font-weight: 500;
+        }
+
+        .ai-bubble {
+            background: var(--glass);
+            border: 1px solid #333;
+            backdrop-filter: blur(10px);
+        }
+
+        /* Input Zone */
+        .input-box {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 70%;
+            background: #1e1e1e;
             border-radius: 15px;
-            line-height: 1.4;
-        }
-
-        .user {
-            align-self: flex-start;
-            background: #7d5fff;
-            color: white;
-            border-bottom-right-radius: 2px;
-        }
-
-        .ai {
-            align-self: flex-end;
-            background: #21262d;
-            border: 1px solid #30363d;
-            border-bottom-left-radius: 2px;
-        }
-
-        .input-area {
-            background: #161b22;
-            padding: 20px;
+            padding: 10px;
             display: flex;
-            gap: 10px;
+            border: 1px solid #333;
         }
 
         input {
             flex: 1;
-            padding: 12px;
-            border-radius: 8px;
-            border: 1px solid #30363d;
-            background: #0d1117;
+            background: transparent;
+            border: none;
             color: white;
+            padding: 12px;
             outline: none;
+            font-size: 16px;
         }
 
         button {
-            background: #7d5fff;
-            color: white;
+            background: var(--accent);
             border: none;
-            padding: 0 20px;
-            border-radius: 8px;
+            padding: 10px 20px;
+            border-radius: 10px;
             cursor: pointer;
             font-weight: bold;
         }
 
-        button:hover { background: #6c47ff; }
+        /* Animations */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .msg-wrapper { animation: fadeIn 0.4s ease forwards; }
+
     </style>
 </head>
 <body>
 
-<header>RADONA BATBOTA AI</header>
+    <div class="sidebar">
+        <div class="new-chat">+ محادثة جديدة</div>
+        <div style="font-size: 12px; color: #666;">السجل (قريباً)</div>
+    </div>
 
-<div id="chat-box">
-    <div class="bubble ai">أهلاً! أنا رادونا، كيفاش نقدر نعاونك؟</div>
-</div>
+    <div class="main-content">
+        <div id="chat-container">
+            <div class="msg-wrapper ai-wrapper">
+                <div class="bubble ai-bubble">مرحباً بك في Radona AI. كيف أساعدك اليوم؟</div>
+            </div>
+        </div>
 
-<div class="input-area">
-    <input type="text" id="msg" placeholder="اكتب سؤالك هنا...">
-    <button onclick="send()">إرسال</button>
-</div>
+        <div class="input-box">
+            <input type="text" id="userInput" placeholder="اسألني أي شيء...">
+            <button onclick="sendMsg()">إرسال</button>
+        </div>
+    </div>
 
-<script>
-    // JS - الحركة
-    function send() {
-        const msgInput = document.getElementById('msg');
-        const chatBox = document.getElementById('chat-box');
-        
-        if (msgInput.value.trim() === "") return;
+    <script>
+        function sendMsg() {
+            const input = document.getElementById('userInput');
+            const container = document.getElementById('chat-container');
+            
+            if (!input.value.trim()) return;
 
-        // ميساج المستخدم
-        chatBox.innerHTML += `<div class="bubble user">${msgInput.value}</div>`;
-        
-        // جواب تجريبي (حتى نربطوه بالدماغ)
-        const userText = msgInput.value;
-        msgInput.value = "";
-        
-        setTimeout(() => {
-            chatBox.innerHTML += `<div class="bubble ai">سمعتك كتقول: "${userText}". هاد الساعة أنا واجهة فقط، قريباً غنولي نجاوبك بصح!</div>`;
-            chatBox.scrollTop = chatBox.scrollHeight;
-        }, 500);
+            // User Message
+            container.innerHTML += `
+                <div class="msg-wrapper user-wrapper">
+                    <div class="bubble user-bubble">${input.value}</div>
+                </div>
+            `;
 
-        chatBox.scrollTop = chatBox.scrollHeight;
-    }
-</script>
+            const val = input.value;
+            input.value = '';
 
+            // AI Loading
+            setTimeout(() => {
+                container.innerHTML += `
+                    <div class="msg-wrapper ai-wrapper">
+                        <div class="bubble ai-bubble">... جاري معالجة طلبك بذكاء</div>
+                    </div>
+                `;
+                container.scrollTop = container.scrollHeight;
+            }, 500);
+        }
+    </script>
 </body>
 </html>
