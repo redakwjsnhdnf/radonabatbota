@@ -1,86 +1,102 @@
 <!DOCTYPE html>
-<html lang="ar">
+<html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <title>THE ENTITY | النظام والشات</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>غرفة الدردشة المجهولة | Private Chat</title>
     <style>
-        body { background: #000; color: #ff0000; font-family: monospace; text-align: center; margin: 0; padding: 20px; }
-        #timer { font-size: 4rem; text-shadow: 0 0 15px #ff0000; margin-bottom: 10px; }
+        :root { --main-green: #00ff41; --bg-black: #050505; }
+        body { background: var(--bg-black); color: var(--main-green); font-family: 'Courier New', Courier, monospace; margin: 0; display: flex; flex-direction: column; height: 100vh; }
         
-        /* تصميم الشات */
-        #chat-container { width: 90%; max-width: 500px; margin: 20px auto; background: #0a0a0a; border: 1px solid #333; height: 300px; display: flex; flex-direction: column; }
-        #messages { flex: 1; overflow-y: auto; padding: 10px; text-align: left; font-size: 0.9rem; color: #00ff00; }
-        #msg-input { background: #000; border: none; border-top: 1px solid #333; color: #fff; padding: 10px; outline: none; }
-        
-        button { background: none; border: 2px solid #ff0000; color: #ff0000; padding: 10px; cursor: pointer; margin-top: 10px; }
-        button:hover { background: #ff0000; color: #000; }
-        .msg-item { margin-bottom: 5px; border-bottom: 1px solid #111; padding-bottom: 2px; }
+        /* Header */
+        header { padding: 10px 20px; border-bottom: 1px solid #1a1a1a; display: flex; justify-content: space-between; align-items: center; background: #0a0a0a; }
+        .status-dot { height: 10px; width: 10px; background-color: var(--main-green); border-radius: 50%; display: inline-block; margin-left: 10px; box-shadow: 0 0 10px var(--main-green); }
+
+        /* Chat Area */
+        #chat-window { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 10px; scroll-behavior: smooth; }
+        .message { background: rgba(0, 255, 65, 0.05); padding: 10px 15px; border-radius: 5px; border-right: 3px solid var(--main-green); max-width: 85%; animation: fadeIn 0.3s ease; }
+        .time { font-size: 0.7rem; color: #555; margin-top: 5px; display: block; }
+
+        /* Input Area */
+        .input-box { padding: 20px; background: #0a0a0a; border-top: 1px solid #1a1a1a; display: flex; gap: 10px; }
+        input { flex: 1; background: #000; border: 1px solid #333; color: var(--main-green); padding: 12px; outline: none; border-radius: 4px; font-size: 1rem; }
+        input:focus { border-color: var(--main-green); }
+        button { background: var(--main-green); color: #000; border: none; padding: 0 25px; cursor: pointer; font-weight: bold; border-radius: 4px; }
+        button:hover { opacity: 0.8; }
+
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        ::-webkit-scrollbar { width: 5px; }
+        ::-webkit-scrollbar-thumb { background: #1a1a1a; }
     </style>
 </head>
 <body>
 
-    <div id="timer">--:--:--</div>
-    <button id="btn">تبرع بـ 10 ثواني</button>
+<header>
+    <div><strong>ANONYMOUS_VOID_V1</strong></div>
+    <div><span id="user-count">...</span> متصل الآن <span class="status-dot"></span></div>
+</header>
 
-    <div id="chat-container">
-        <div id="messages"></div>
-        <input type="text" id="msg-input" placeholder="اكتب رسالة مجهولة..." maxlength="100">
+<div id="chat-window">
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
+<div class="input-box">
+    <input type="text" id="msg-input" placeholder="اكتب رسالتك المشفرة هنا..." maxlength="200" autocomplete="off">
+    <button id="send-btn">إرسال</button>
+</div>
 
-    <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyBGbP9HXebg4Z5WabWF4CEq9zJ5QEHO7PU",
-            databaseURL: "https://realtime-database-df34b-default-rtdb.firebaseio.com",
-            projectId: "realtime-database-df34b"
-        };
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
 
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
-        
-        // المراجع
-        const timerRef = db.ref('globalTimer');
-        const chatRef = db.ref('chat');
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyBGbP9HXebg4Z5WabWF4CEq9zJ5QEHO7PU",
+        databaseURL: "https://realtime-database-df34b-default-rtdb.firebaseio.com",
+        projectId: "realtime-database-df34b"
+    };
 
-        // 1. نظام العداد (نفس اللي خدم ليك)
-        timerRef.on('value', (snapshot) => {
-            let val = snapshot.val();
-            if (val === null) { document.getElementById('timer').innerText = "OFFLINE"; }
-            else {
-                let h = Math.floor(val / 3600), m = Math.floor((val % 3600) / 60), s = val % 60;
-                document.getElementById('timer').innerText = `${h.toString().padStart(2,'0')}:${m.toString().padStart(2,'0')}:${s.toString().padStart(2,'0')}`;
-            }
-        });
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+    const chatRef = db.ref('chat_v2'); // استعملنا نود جديد باش ما يتخلطش مع القديم
+    const presenceRef = db.ref('online_users');
 
-        document.getElementById('btn').onclick = () => { timerRef.transaction(t => (t || 86400) + 10); };
-        setInterval(() => { timerRef.transaction(t => (t && t > 0) ? t - 1 : 0); }, 1000);
+    const chatWindow = document.getElementById('chat-window');
+    const msgInput = document.getElementById('msg-input');
+    const sendBtn = document.getElementById('send-btn');
 
-        // 2. نظام الشات
-        const msgInput = document.getElementById('msg-input');
-        const messagesDiv = document.getElementById('messages');
+    // 1. نظام عد المتواجدين (Presence)
+    const userRef = presenceRef.push();
+    userRef.set(true);
+    userRef.onDisconnect().remove(); // كيحذف المستخدم فاش يخرج
 
-        // إرسال الرسالة
-        msgInput.addEventListener('keypress', (e) => {
-            if (e.key === 'Enter' && msgInput.value.trim() !== "") {
-                chatRef.push({
-                    text: msgInput.value,
-                    timestamp: Date.now()
-                });
-                msgInput.value = "";
-            }
-        });
+    presenceRef.on('value', (snap) => {
+        document.getElementById('user-count').innerText = snap.numChildren();
+    });
 
-        // استقبال الرسائل (فقط آخر 50 رسالة باش ما يثقلش السيت)
-        chatRef.limitToLast(50).on('child_added', (snapshot) => {
-            const data = snapshot.val();
-            const msgEl = document.createElement('div');
-            msgEl.className = 'msg-item';
-            msgEl.innerText = `> ${data.text}`;
-            messagesDiv.appendChild(msgEl);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight; // النزول لآخر رسالة
-        });
-    </script>
+    // 2. إرسال الرسائل
+    function sendMessage() {
+        const text = msgInput.value.trim();
+        if (text !== "") {
+            chatRef.push({
+                text: text,
+                time: new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})
+            });
+            msgInput.value = "";
+        }
+    }
+
+    sendBtn.onclick = sendMessage;
+    msgInput.onkeypress = (e) => { if(e.key === 'Enter') sendMessage(); };
+
+    // 3. استقبال الرسائل وعرضها
+    chatRef.limitToLast(100).on('child_added', (snapshot) => {
+        const data = snapshot.val();
+        const msgDiv = document.createElement('div');
+        msgDiv.className = 'message';
+        msgDiv.innerHTML = `<div>${data.text}</div><span class="time">${data.time}</span>`;
+        chatWindow.appendChild(msgDiv);
+        chatWindow.scrollTop = chatWindow.scrollHeight; // ديما هبط لتحت
+    });
+</script>
+
 </body>
 </html>
