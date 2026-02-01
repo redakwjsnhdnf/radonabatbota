@@ -3,44 +3,72 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>X-CORE | المملكة الافتراضية</title>
+    <title>X-CORE | ساحة النزال الملكية 3D</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Amiri:wght@700&display=swap');
-        body { margin: 0; background: #000; overflow: hidden; font-family: 'Amiri', serif; }
+        @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@900&family=Amiri:wght@700&display=swap');
         
-        /* شاشة الدخول */
-        #auth {
-            position: fixed; inset: 0; background: radial-gradient(circle, #2b0202, #000);
-            display: flex; flex-direction: column; align-items: center; justify-content: center; z-index: 100;
-        }
-        input { padding: 15px; border: 2px solid #d4af37; background: #000; color: #fff; text-align: center; font-size: 1.2rem; }
-        button { margin-top: 20px; padding: 10px 40px; background: #d4af37; border: none; font-weight: bold; cursor: pointer; }
+        body { margin: 0; overflow: hidden; font-family: 'Amiri', serif; background-color: #000; color: #d4af37; }
+        canvas { display: block; }
 
-        /* ساحة اللعب */
-        #game-world { width: 100vw; height: 100vh; background: #1a1a1a; position: relative; display: none; }
-        .player {
-            position: absolute; width: 50px; height: 50px;
-            transition: all 0.2s linear; display: flex; flex-direction: column; align-items: center;
+        /* شاشة الدخول والرومات */
+        #ui-overlay {
+            position: absolute; inset: 0; background: rgba(0,0,0,0.8); z-index: 100;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
         }
-        .avatar { 
-            width: 40px; height: 40px; background: #d4af37; 
-            border: 3px solid #fff; border-radius: 50%; 
-            box-shadow: 0 0 15px #d4af37;
+        .ui-panel {
+            background: #1a0a05; border: 2px solid #d4af37; padding: 40px;
+            box-shadow: 0 0 50px rgba(212,175,55,0.2); text-align: center;
+            width: 90vw; max-width: 400px;
         }
-        .player-name { color: #fff; font-size: 0.8rem; background: rgba(0,0,0,0.7); padding: 2px 8px; border-radius: 10px; margin-top: 5px; white-space: nowrap; }
+        h1 { font-family: 'Playfair Display', serif; font-size: 2.5rem; color: #d4af37; margin-bottom: 30px; }
+        input { padding: 12px; margin-bottom: 15px; width: calc(100% - 24px); background: #000; border: 1px solid #555; color: #fff; text-align: center; }
+        button { padding: 10px 30px; background: #d4af37; color: #000; border: none; font-weight: bold; cursor: pointer; margin-top: 10px; }
+        button:hover { filter: brightness(1.2); }
+        .room-item {
+            background: rgba(212,175,55,0.05); border: 1px solid #d4af37; margin-top: 10px; padding: 10px;
+            display: flex; justify-content: space-between; align-items: center;
+        }
+
+        /* رسالة الهجوم */
+        #attack-message {
+            position: absolute; top: 10%; left: 50%; transform: translateX(-50%);
+            background: rgba(255,0,0,0.8); color: white; padding: 15px 30px; border-radius: 5px;
+            font-size: 2rem; font-weight: bold; z-index: 101; display: none; opacity: 0;
+            animation: attackFade 1s forwards;
+        }
+
+        @keyframes attackFade {
+            0% { opacity: 0; transform: translateX(-50%) scale(0.8); }
+            20% { opacity: 1; transform: translateX(-50%) scale(1.1); }
+            100% { opacity: 0; transform: translateX(-50%) scale(1.2); }
+        }
     </style>
 </head>
 <body>
 
-    <div id="auth">
-        <h1 style="color:#d4af37; font-size: 3rem;">الديوان المفتوح</h1>
-        <input type="text" id="username" placeholder="ادخل اسمك الملكي" maxlength="8">
-        <button onclick="enterWorld()">دخول المملكة</button>
-    </div>
-
-    <div id="game-world" onclick="moveTo(event)">
+    <div id="ui-overlay">
+        <div class="ui-panel" id="login-panel">
+            <h1>الدخول إلى الديوان</h1>
+            <input type="text" id="username" placeholder="المعرف (حروف وأرقام، 3-6)" maxlength="6">
+            <input type="password" id="password" placeholder="كلمة المرور (8 رموز)" maxlength="8">
+            <p id="error-msg" style="color:red; display:none;"></p>
+            <button onclick="handleLogin()">دخول / تسجيل</button>
         </div>
 
+        <div class="ui-panel" id="lobby-panel" style="display:none;">
+            <h1>قاعات النزال</h1>
+            <p>مرحباً بك: <span id="my-player-name"></span></p>
+            <input type="text" id="new-room-name" placeholder="اسم قاعة جديدة (اختياري)">
+            <button onclick="createOrJoinRoom()">إنشاء / دخول قاعة</button>
+            <hr style="border-top: 1px solid #333; margin: 20px 0;">
+            <h3>القاعات النشطة:</h3>
+            <div id="rooms-list"></div>
+        </div>
+    </div>
+
+    <div id="attack-message">تم الهجوم!</div>
+
+    <script src="https://cdn.jsdelivr.net/npm/three@0.137.5/build/three.min.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.17.1/firebase-database-compat.js"></script>
 
@@ -52,73 +80,214 @@
         };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
-        
-        let myId = "";
-        let players = {};
 
-        function enterWorld() {
-            myId = document.getElementById('username').value.trim();
-            if(!myId) return alert("الاسم مطلوب");
-            
-            document.getElementById('auth').style.display = 'none';
-            document.getElementById('game-world').style.display = 'block';
+        let myPlayerId = "";
+        let currentRoomId = null;
+        let playersInRoom = {}; // لتخزين اللاعبين ومواقعهم في 3D
 
-            // إنشاء الشخصية في مكان عشوائي
-            const initialPos = { x: Math.random() * (window.innerWidth - 50), y: Math.random() * (window.innerHeight - 50) };
-            db.ref('world/players/' + myId).set(initialPos);
-            db.ref('world/players/' + myId).onDisconnect().remove();
+        // ====== Logic التسجيل والدخول ======
+        async function handleLogin() {
+            const username = document.getElementById('username').value.trim();
+            const password = document.getElementById('password').value.trim();
+            const errorMsg = document.getElementById('error-msg');
+            const userRegex = /^[a-zA-Z0-9]+$/;
 
-            listenToWorld();
+            if (!userRegex.test(username) || username.length < 3 || username.length > 6) {
+                errorMsg.innerText = "المعرف: حروف وأرقام (3-6)";
+                errorMsg.style.display = 'block';
+                return;
+            }
+            if (password.length !== 8) {
+                errorMsg.innerText = "كلمة المرور: 8 رموز بالضبط";
+                errorMsg.style.display = 'block';
+                return;
+            }
+            errorMsg.style.display = 'none';
+
+            const userRef = db.ref('users/' + username);
+            const snapshot = await userRef.get();
+
+            if (snapshot.exists()) {
+                if (snapshot.val().pass === password) {
+                    myPlayerId = username;
+                    document.getElementById('my-player-name').innerText = myPlayerId;
+                    showLobby();
+                } else {
+                    errorMsg.innerText = "كلمة المرور خاطئة!";
+                    errorMsg.style.display = 'block';
+                }
+            } else {
+                await userRef.set({ pass: password });
+                myPlayerId = username;
+                document.getElementById('my-player-name').innerText = myPlayerId;
+                showLobby();
+            }
         }
 
-        // الاستماع لحركة الجميع
-        function listenToWorld() {
-            db.ref('world/players').on('value', (snap) => {
-                const data = snap.val() || {};
-                const world = document.getElementById('game-world');
-                
-                // إزالة الشخصيات التي خرجت
-                Object.keys(players).forEach(id => {
-                    if (!data[id]) {
-                        document.getElementById('p-' + id)?.remove();
-                        delete players[id];
-                    }
-                });
+        function showLobby() {
+            document.getElementById('login-panel').style.display = 'none';
+            document.getElementById('lobby-panel').style.display = 'block';
+            listenToRooms();
+        }
 
-                // تحديث أو إنشاء الشخصيات
-                Object.keys(data).forEach(id => {
-                    let pEl = document.getElementById('p-' + id);
-                    if (!pEl) {
-                        pEl = document.createElement('div');
-                        pEl.id = 'p-' + id;
-                        pEl.className = 'player';
-                        pEl.innerHTML = `<div class="avatar"></div><div class="player-name">${id}</div>`;
-                        world.appendChild(pEl);
-                    }
-                    pEl.style.left = data[id].x + 'px';
-                    pEl.style.top = data[id].y + 'px';
-                    players[id] = data[id];
+        function listenToRooms() {
+            db.ref('rooms').on('value', (snapshot) => {
+                const roomsList = document.getElementById('rooms-list');
+                roomsList.innerHTML = '';
+                snapshot.forEach((roomSnap) => {
+                    const roomId = roomSnap.key;
+                    const roomData = roomSnap.val();
+                    const playerCount = Object.keys(roomData.players || {}).length;
+                    
+                    const roomDiv = document.createElement('div');
+                    roomDiv.className = 'room-item';
+                    roomDiv.innerHTML = `
+                        <span>${roomId} (${playerCount}/2)</span>
+                        <button onclick="joinRoom('${roomId}')" ${playerCount >= 2 ? 'disabled' : ''}>دخول</button>
+                    `;
+                    roomsList.appendChild(roomDiv);
                 });
             });
         }
 
-        // تحريك الشخصية باللمس أو النقر
-        function moveTo(e) {
-            const newX = e.clientX - 25;
-            const newY = e.clientY - 25;
-            db.ref('world/players/' + myId).set({ x: newX, y: newY });
+        async function createOrJoinRoom() {
+            const newRoomName = document.getElementById('new-room-name').value.trim();
+            const roomId = newRoomName || 'default_arena'; // غرفة افتراضية
+
+            const roomRef = db.ref('rooms/' + roomId);
+            const snapshot = await roomRef.get();
+
+            if (snapshot.exists() && Object.keys(snapshot.val().players || {}).length >= 2) {
+                alert("هذه القاعة ممتلئة!");
+                return;
+            }
+            joinRoom(roomId);
         }
 
-        // تحريك الشخصية بالأسهم (PC)
-        window.addEventListener('keydown', (e) => {
-            if (!myId) return;
-            let { x, y } = players[myId];
-            const step = 20;
-            if (e.key === "ArrowUp") y -= step;
-            if (e.key === "ArrowDown") y += step;
-            if (e.key === "ArrowLeft") x -= step;
-            if (e.key === "ArrowRight") x += step;
-            db.ref('world/players/' + myId).set({ x, y });
+        async function joinRoom(roomId) {
+            currentRoomId = roomId;
+            const playerRef = db.ref(`rooms/${roomId}/players/${myPlayerId}`);
+            
+            await playerRef.set({
+                x: Math.random() * 10 - 5, // إحداثيات عشوائية للمبتدئين
+                y: 0,
+                z: Math.random() * 10 - 5,
+                hp: 100 // نقاط الصحة
+            });
+            playerRef.onDisconnect().remove();
+
+            document.getElementById('ui-overlay').style.display = 'none';
+            startGame(roomId);
+        }
+
+        // ====== Logic اللعبة ثلاثية الأبعاد ======
+        let scene, camera, renderer;
+        let playerMesh, opponentMesh; // الشخصيات
+        const playerSpeed = 0.1;
+        
+        function startGame(roomId) {
+            // تهيئة المشهد
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            document.body.appendChild(renderer.domElement);
+
+            // إضاءة
+            const ambientLight = new THREE.AmbientLight(0x404040, 2); // إضاءة عامة
+            scene.add(ambientLight);
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+            directionalLight.position.set(5, 10, 5);
+            scene.add(directionalLight);
+
+            // أرضية القتال (نموذج فيكتوري بسيط)
+            const floorGeometry = new THREE.PlaneGeometry(20, 20);
+            const floorMaterial = new THREE.MeshLambertMaterial({ color: 0x4a0404 }); // أحمر مخملي
+            const floor = new THREE.Mesh(floorGeometry, floorMaterial);
+            floor.rotation.x = -Math.PI / 2;
+            scene.add(floor);
+
+            // شخصية اللاعب (مكعب بسيط مبدئياً)
+            const playerGeometry = new THREE.BoxGeometry(1, 1, 1);
+            const playerMaterial = new THREE.MeshLambertMaterial({ color: 0xd4af37 }); // ذهبي
+            playerMesh = new THREE.Mesh(playerGeometry, playerMaterial);
+            scene.add(playerMesh);
+
+            // الكاميرا
+            camera.position.set(0, 10, 10);
+            camera.lookAt(0, 0, 0);
+
+            // الاستماع لحركات اللاعبين في الروم
+            db.ref(`rooms/${roomId}/players`).on('value', (snapshot) => {
+                const data = snapshot.val();
+                if (!data) return;
+
+                // تحديث شخصيات اللاعبين
+                Object.keys(data).forEach(pId => {
+                    if (pId === myPlayerId) {
+                        playerMesh.position.set(data[pId].x, data[pId].y, data[pId].z);
+                    } else {
+                        // إنشاء أو تحديث خصم
+                        if (!opponentMesh) {
+                            const opponentGeometry = new THREE.BoxGeometry(1, 1, 1);
+                            const opponentMaterial = new THREE.MeshLambertMaterial({ color: 0x8b0000 }); // خصم أحمر داكن
+                            opponentMesh = new THREE.Mesh(opponentGeometry, opponentMaterial);
+                            scene.add(opponentMesh);
+                        }
+                        opponentMesh.position.set(data[pId].x, data[pId].y, data[pId].z);
+                    }
+                });
+            });
+
+            // التحكم بالحركة
+            document.addEventListener('keydown', (e) => {
+                let pos = { x: playerMesh.position.x, y: playerMesh.position.y, z: playerMesh.position.z };
+                if (e.key === 'ArrowUp') pos.z -= playerSpeed;
+                if (e.key === 'ArrowDown') pos.z += playerSpeed;
+                if (e.key === 'ArrowLeft') pos.x -= playerSpeed;
+                if (e.key === 'ArrowRight') pos.x += playerSpeed;
+
+                db.ref(`rooms/${roomId}/players/${myPlayerId}`).update(pos);
+            });
+
+            // الهجوم عند الضغط
+            document.addEventListener('click', handleAttack);
+
+            // حلقة العرض (Animation loop)
+            function animate() {
+                requestAnimationFrame(animate);
+                renderer.render(scene, camera);
+            }
+            animate();
+        }
+
+        async function handleAttack() {
+            if (!currentRoomId || !opponentMesh) return; // لا يوجد خصم للهجوم
+
+            const attackMessage = document.getElementById('attack-message');
+            attackMessage.style.display = 'block';
+            attackMessage.style.opacity = 1;
+            setTimeout(() => { attackMessage.style.display = 'none'; }, 1000);
+
+            // إرسال هجوم للخصم
+            // هذه مجرد مثال، تحتاج لمنطق قتال أكثر تعقيداً (تحديد المسافة، الضرر...)
+            let opponentId = null;
+            const roomPlayers = await db.ref(`rooms/${currentRoomId}/players`).get();
+            roomPlayers.forEach(playerSnap => {
+                if(playerSnap.key !== myPlayerId) opponentId = playerSnap.key;
+            });
+
+            if(opponentId) {
+                db.ref(`rooms/${currentRoomId}/players/${opponentId}/hp`).transaction(currentHp => {
+                    return (currentHp || 100) - 10; // نقص 10 نقاط صحة
+                });
+            }
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
         });
     </script>
 </body>
